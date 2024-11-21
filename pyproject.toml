@@ -1,0 +1,37 @@
+[project]
+name = "rag-doctor"
+version = "0.1.0"
+description = "Showcase RAG inference for technical documentation using Qdrant and OpenAI"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [
+    { name = "Valohai", email = "hait@valohai.com" },
+]
+dependencies = [
+    "langchain",
+    "langchain-openai",
+    "openai",
+    "pandas",
+    "python-dotenv",
+    "qdrant-client",
+    "tiktoken",
+    "valohai-utils",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project.scripts]
+rag-doctor = "rag_doctor.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rag_doctor"]
+
+[tool.ruff]
+line-length = 100
+
+[dependency-groups]
+lint = [
+    "ruff>=0.7.4",
+]

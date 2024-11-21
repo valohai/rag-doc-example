@@ -1,0 +1,20 @@
+- step:
+    name: create-database
+    image: ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+    command: uv run rag-doctor
+    parameters:
+      - name: content_column_index
+        description: Index of the document content column in the CSV files
+        type: integer
+        default: 0
+      - name: source_column_index
+        description: Index of the source link column in the CSV files
+        type: integer
+        default: 1
+      - name: files_have_header
+        description: Number of initial rows to skip in the CSV files i.e. the header rows
+        type: integer
+        default: 0
+    inputs:
+      - name: documentation_csv
+        description: CSV file(s) containing the technical documentation

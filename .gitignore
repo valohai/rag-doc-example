@@ -1,0 +1,5 @@
+.env
+.venv/
+.valohai/
+qdrant_data/
+__pycache__/
