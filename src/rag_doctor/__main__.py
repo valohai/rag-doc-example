@@ -73,6 +73,10 @@ def cli_query(sys_argv: list[str]) -> None:
     db_client = prepare_database(args.database_dir)
     rag_chain = create_rag_chain(db_client)
     message = rag_chain(args.question)
+
+    if not message or not message.content:
+        raise ValueError("No response from the model")
+
     print(message.content)
 
 
