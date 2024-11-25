@@ -28,6 +28,9 @@ rag-doctor = "rag_doctor.__main__:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/rag_doctor"]
 
+[tool.uv]
+link-mode = "copy"
+
 [tool.ruff]
 line-length = 100
 
