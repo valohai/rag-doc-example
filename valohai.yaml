@@ -18,6 +18,7 @@
     inputs:
       - name: documentation_csv
         description: CSV file(s) containing the technical documentation
+        default: https://valohai-examples.s3.amazonaws.com/rag-doc/huggingface-docs.csv
 
 - step:
     name: single-inference
