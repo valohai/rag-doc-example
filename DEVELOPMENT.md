@@ -30,8 +30,14 @@ Create the vector database and fill it with the text embeddings for search:
 uv run rag-doctor create-database
 ```
 
-Start an interactive session to query the documentation:
+Now you can query the documentation from the command line:
 
 ```bash
-uv run rag-doctor chat
+uv run rag-doctor query --database_dir="./qdrant_data" --question="what is a dataset?"
+```
+
+Or start an interactive chat session:
+
+```bash
+uv run rag-doctor chat  --database_dir="./qdrant_data"
 ```

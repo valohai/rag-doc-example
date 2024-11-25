@@ -8,14 +8,16 @@ from dotenv import load_dotenv
 
 from rag_doctor.database import create_database, prepare_database
 from rag_doctor.interactive import start_chat
+from rag_doctor.query import create_rag_chain
 
-VECTORIZE_CMD = "create-database"
+CREATE_DB_CMD = "create-database"
+QUERY_CMD = "query"
 CHAT_CMD = "chat"
 
 
 def cli(sys_argv: list[str]) -> int:
     program_name = os.path.basename(sys_argv[0])
-    usage_msg = f"Usage: {program_name} [{VECTORIZE_CMD}|{CHAT_CMD}]"
+    usage_msg = f"Usage: {program_name} [{CREATE_DB_CMD}|{QUERY_CMD}|{CHAT_CMD}]"
 
     if len(sys_argv) < 2:
         print(usage_msg)
@@ -23,10 +25,12 @@ def cli(sys_argv: list[str]) -> int:
 
     status = 0
     command = sys_argv[1]
-    if command == VECTORIZE_CMD:
+    if command == CREATE_DB_CMD:
         cli_create_database(sys_argv)
     elif command == CHAT_CMD:
         cli_chat(sys_argv)
+    elif command == QUERY_CMD:
+        cli_query(sys_argv)
     else:
         print(usage_msg)
         if command != "--help":
@@ -40,11 +44,11 @@ def cli_create_database(sys_argv: list[str]) -> None:
     # fmt: off
     parser = argparse.ArgumentParser()
     doc_dir_on_valohai = valohai.inputs("documentation_csv").dir_path()
+    parser.add_argument("--database_dir", type=str, default="./qdrant_data", help="Path to directory to store Qdrant vector database")
     parser.add_argument("--documentation_dir", type=str, default=doc_dir_on_valohai, help="Path to directory containing documentation CSV files")
     parser.add_argument("--content_column_index", type=int, default=0, help="Index of the document content column in the CSV files")
     parser.add_argument("--source_column_index", type=int, default=1, help="Index of the source link column in the CSV files")
     parser.add_argument("--header_row_skip", type=int, default=0, help="Number of initial rows to skip in the CSV files i.e. the header rows")
-    parser.add_argument("--database_dir", type=str, default="./qdrant_data", help="Path to directory to store Qdrant vector database")
     args, _ = parser.parse_known_args(sys_argv[2:])
     # fmt: on
 
@@ -57,11 +61,26 @@ def cli_create_database(sys_argv: list[str]) -> None:
     )
 
 
+def cli_query(sys_argv: list[str]) -> None:
+    # fmt: off
+    db_dir_on_valohai = valohai.inputs("embedding_db").dir_path()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--database_dir", type=str, default=db_dir_on_valohai, help="Path to directory containing Qdrant vector database")
+    parser.add_argument("--question", type=str, required=True, help="Question to ask")
+    args, _ = parser.parse_known_args(sys_argv[2:])
+    # fmt: on
+
+    db_client = prepare_database(args.database_dir)
+    rag_chain = create_rag_chain(db_client)
+    message = rag_chain(args.question)
+    print(message.content)
+
+
 def cli_chat(sys_argv: list[str]) -> None:
     # fmt: off
-    default_db_dir = valohai.inputs("embedding_db").dir_path()
+    db_dir_on_valohai = valohai.inputs("embedding_db").dir_path()
     parser = argparse.ArgumentParser()
-    parser.add_argument("--database_dir", type=str, default=default_db_dir, help="Path to directory containing Qdrant vector database")
+    parser.add_argument("--database_dir", type=str, default=db_dir_on_valohai, help="Path to directory containing Qdrant vector database")
     args, _ = parser.parse_known_args(sys_argv[2:])
     # fmt: on
 
