@@ -27,6 +27,7 @@
       - name: question
         description: The question to ask about the documentation
         type: string
+        default: "what is a dataset?"
     inputs:
       - name: embedding_db
         description: Zip archive containing the Qdrant vector database for the embeddings
@@ -37,8 +38,8 @@
       - name: embeddings
         type: execution
         step: create-embeddings
-      - name: inference
+      - name: smoke-test
         type: execution
         step: single-inference
     edges:
-      - [embeddings.output.*, inference.input.embedding_db]
+      - [embeddings.output.*, smoke-test.input.embedding_db]
