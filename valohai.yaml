@@ -1,5 +1,5 @@
 - step:
-    name: create-database
+    name: create-embeddings
     image: ghcr.io/astral-sh/uv:python3.11-bookworm-slim
     command: uv run rag-doctor create-database {parameters}
     parameters:
@@ -18,3 +18,15 @@
     inputs:
       - name: documentation_csv
         description: CSV file(s) containing the technical documentation
+
+- step:
+    name: single-inference
+    image: ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+    command: uv run rag-doctor query {parameters}
+    parameters:
+      - name: question
+        description: The question to ask about the documentation
+        type: string
+    inputs:
+      - name: embedding_db
+        description: Zip archive containing the Qdrant vector database for the embeddings
