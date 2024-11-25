@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import zipfile
 from datetime import datetime, timezone
@@ -35,17 +37,27 @@ def create_database(
         header_row_skip=header_row_skip,
     )
 
-    db_dir_path = Path(database_dir)
-    db_dir_path.mkdir(exist_ok=True)
+    Path(database_dir).mkdir(exist_ok=True)
+    db_client = QdrantClient(path=database_dir)
 
-    client = QdrantClient(path=str(db_dir_path))
-    create_qdrant_collection(client)
-    vectorize_documents(client, documents)
+    create_qdrant_collection(db_client)
+    vectorize_documents(db_client, documents)
 
     if valohai.config.is_running_in_valohai():
-        package_database(db_dir_path)
+        package_database(database_dir)
 
     log.info("Vector database creation complete!")
+
+
+def get_qdrant_client(database_dir: Path | str) -> QdrantClient:
+    database_dir_path = Path(database_dir)
+
+    if not database_dir_path.is_dir():
+        raise ValueError(f"Database directory {database_dir_path} does not exist.")
+
+    # TODO: if database_dir_path doesn't look like a Qdrant directory, find the first zip and unzip it
+
+    return QdrantClient(path=str(database_dir_path))
 
 
 def gather_documentation(
@@ -81,15 +93,15 @@ def gather_documentation(
     return merged_documents
 
 
-def create_qdrant_collection(client: QdrantClient) -> None:
+def create_qdrant_collection(db_client: QdrantClient) -> None:
     log.info("Creating Qdrant collection for the embeddings...")
-    collections = client.get_collections().collections
+    collections = db_client.get_collections().collections
     if not any(collection.name == COLLECTION_NAME for collection in collections):
         config = models.VectorParams(size=EMBEDDING_LENGTH, distance=models.Distance.COSINE)
-        client.create_collection(collection_name=COLLECTION_NAME, vectors_config=config)
+        db_client.create_collection(collection_name=COLLECTION_NAME, vectors_config=config)
 
 
-def vectorize_documents(client: QdrantClient, documents: pd.DataFrame) -> None:
+def vectorize_documents(db_client: QdrantClient, documents: pd.DataFrame) -> None:
     batch_size = 100
     embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
     batch_count = (len(documents) // batch_size) + 1
@@ -116,11 +128,16 @@ def vectorize_documents(client: QdrantClient, documents: pd.DataFrame) -> None:
                 )
             )
 
-        client.upsert(collection_name=COLLECTION_NAME, points=points)
+        db_client.upsert(collection_name=COLLECTION_NAME, points=points)
 
 
-def package_database(database_dir_path: Path):
+def package_database(database_dir: Path | str):
     log.info("Packaging database for upload...")
+
+    database_dir_path = Path(database_dir)
+
+    if not database_dir_path.is_dir():
+        raise ValueError(f"Qdrant database directory {database_dir_path} does not exist.")
 
     timestamp = datetime.now().astimezone(timezone.utc).strftime("%Y%m%d-%H%M%S")
     zip_path = Path(valohai.outputs().path(f"doc-embeddings-{timestamp}.zip"))

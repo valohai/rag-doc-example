@@ -7,7 +7,7 @@ import valohai
 from dotenv import load_dotenv
 
 from rag_doctor.consts import DEFAULT_DATABASE_DIR
-from rag_doctor.database import create_database
+from rag_doctor.database import create_database, get_qdrant_client
 from rag_doctor.interactive import start_chat
 
 VECTORIZE_CMD = "create-database"
@@ -65,7 +65,8 @@ def cli_chat(sys_argv: list[str]) -> None:
     args, _ = parser.parse_known_args(sys_argv[2:])
     # fmt: on
 
-    start_chat(database_dir=args.database_dir)
+    db_client = get_qdrant_client(args.database_dir)
+    start_chat(db_client=db_client)
 
 
 def main():

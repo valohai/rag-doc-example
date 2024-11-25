@@ -21,12 +21,14 @@ from rag_doctor.consts import (
 log = logging.getLogger(__name__)
 
 
-def create_rag_chain(client: QdrantClient) -> Callable[[str], BaseMessage]:
+def create_rag_chain(db_client: QdrantClient) -> Callable[[str], BaseMessage]:
     embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
 
     def retrieve_related_documents(query: str) -> List[Document]:
         query_vector = embeddings.embed_query(query)
-        results = client.search(collection_name=COLLECTION_NAME, query_vector=query_vector, limit=3)
+        results = db_client.search(
+            collection_name=COLLECTION_NAME, query_vector=query_vector, limit=3
+        )
         documents = []
         for result in results:
             documents.append(
