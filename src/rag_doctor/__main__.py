@@ -77,6 +77,9 @@ def cli_query(sys_argv: list[str]) -> None:
     if not message or not message.content:
         raise ValueError("No response from the model")
 
+    print("Question: ")
+    print(args.question)
+    print("\nAnswer: ")
     print(message.content)
 
 
