@@ -33,6 +33,16 @@
       - name: embedding_db
         description: Zip archive containing the Qdrant vector database for the embeddings
 
+- endpoint:
+    name: ask
+    image: ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+    port: 8000
+    server-command: uv run --group server rag-doctor serve --host 0.0.0.0 --database_dir ./qdrant_data
+    files:
+      - name: embedding_db
+        path: qdrant_data/embeddings.zip
+        description: Zip archive containing the Qdrant vector database for the embeddings
+
 - pipeline:
     name: rag-pipeline
     nodes:
@@ -42,5 +52,10 @@
       - name: smoke-test
         type: execution
         step: single-inference
+      - name: deploy
+        type: deployment
+        deployment: valohai-cloud
+        endpoints: [ask]
     edges:
       - [embeddings.output.*, smoke-test.input.embedding_db]
+      - [embeddings.output.*, deploy.file.ask.embedding_db]

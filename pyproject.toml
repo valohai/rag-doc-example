@@ -36,5 +36,11 @@ line-length = 100
 
 [dependency-groups]
 lint = [
-    "ruff>=0.7.4",
+    "ruff",
+]
+server = [
+    "fastapi",
+    "pydantic",
+    "python-multipart",
+    "uvicorn",
 ]

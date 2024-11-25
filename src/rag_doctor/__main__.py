@@ -13,11 +13,12 @@ from rag_doctor.query import create_rag_chain
 CREATE_DB_CMD = "create-database"
 QUERY_CMD = "query"
 CHAT_CMD = "chat"
+SERVE_CMD = "serve"
 
 
 def cli(sys_argv: list[str]) -> int:
     program_name = os.path.basename(sys_argv[0])
-    usage_msg = f"Usage: {program_name} [{CREATE_DB_CMD}|{QUERY_CMD}|{CHAT_CMD}]"
+    usage_msg = f"Usage: {program_name} [{CREATE_DB_CMD}|{QUERY_CMD}|{CHAT_CMD}|{SERVE_CMD}]"
 
     if len(sys_argv) < 2:
         print(usage_msg)
@@ -31,6 +32,8 @@ def cli(sys_argv: list[str]) -> int:
         cli_chat(sys_argv)
     elif command == QUERY_CMD:
         cli_query(sys_argv)
+    elif command == SERVE_CMD:
+        cli_serve(sys_argv)
     else:
         print(usage_msg)
         if command != "--help":
@@ -93,6 +96,24 @@ def cli_chat(sys_argv: list[str]) -> None:
 
     db_client = prepare_database(args.database_dir)
     start_chat(db_client=db_client)
+
+
+def cli_serve(sys_argv: list[str]) -> None:
+    # fmt: off
+    db_dir_on_valohai = valohai.inputs("embedding_db").dir_path()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--database_dir", type=str, default=db_dir_on_valohai, help="Path to directory containing Qdrant vector database")
+    parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind the server to")
+    parser.add_argument("--port", type=int, default=8000, help="Port to bind the server to")
+    args, _ = parser.parse_known_args(sys_argv[2:])
+    # fmt: on
+
+    import uvicorn
+    from rag_doctor.server import create_app
+
+    db_client = prepare_database(args.database_dir)
+    app = create_app(db_client)
+    uvicorn.run(app, host=args.host, port=args.port)
 
 
 def main():
