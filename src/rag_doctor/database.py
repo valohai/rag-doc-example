@@ -49,13 +49,20 @@ def create_database(
     log.info("Vector database creation complete!")
 
 
-def get_qdrant_client(database_dir: Path | str) -> QdrantClient:
+def prepare_database(database_dir: Path | str) -> QdrantClient:
     database_dir_path = Path(database_dir)
 
     if not database_dir_path.is_dir():
-        raise ValueError(f"Database directory {database_dir_path} does not exist.")
+        raise ValueError(f"Database directory {database_dir_path} does not exist")
 
-    # TODO: if database_dir_path doesn't look like a Qdrant directory, find the first zip and unzip it
+    # if it doesn't look like a Qdrant database, find the first zip and unzip it
+    if not (database_dir_path / "meta.json").is_file():
+        try:
+            first_zip = next(database_dir_path.glob("*.zip"))
+        except StopIteration:
+            raise ValueError(f"Directory {database_dir_path} does not contain a Qdrant database")
+        with zipfile.ZipFile(first_zip) as zip_file:
+            zip_file.extractall(database_dir_path)
 
     return QdrantClient(path=str(database_dir_path))
 

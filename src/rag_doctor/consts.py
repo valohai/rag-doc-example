@@ -7,5 +7,3 @@ PROMPT_MAX_TOKENS = 128_000  # model "context window" from https://platform.open
 COLLECTION_NAME = "docs"
 CONTENT_COLUMN = "content"
 SOURCE_COLUMN = "source"
-
-DEFAULT_DATABASE_DIR = "./qdrant_data"
