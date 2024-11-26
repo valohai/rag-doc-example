@@ -41,3 +41,9 @@ Or start an interactive chat session:
 ```bash
 uv run rag-doctor chat  --database_dir="./qdrant_data"
 ```
+
+If you want to enable debugging logging, set the `DEBUG` environment variable:
+
+```bash
+DEBUG=1 uv run ...
+```
