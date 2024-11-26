@@ -122,7 +122,7 @@ def cli_serve(sys_argv: list[str]) -> None:
 
 def main():
     load_dotenv()  # load environment variables from `.env`
-    logging.basicConfig(level=logging.INFO)
+    logging.basicConfig(level=logging.WARNING)
     try:
         status = cli(sys.argv)
     except KeyboardInterrupt:
