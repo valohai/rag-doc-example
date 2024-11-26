@@ -69,21 +69,25 @@ def cli_query(sys_argv: list[str]) -> None:
     db_dir_on_valohai = valohai.inputs("embedding_db").dir_path()
     parser = argparse.ArgumentParser()
     parser.add_argument("--database_dir", type=str, default=db_dir_on_valohai, help="Path to directory containing Qdrant vector database")
-    parser.add_argument("--question", type=str, required=True, help="Question to ask")
+    parser.add_argument("--question", type=str, required=True, help="Question to ask", action="append")
     args, _ = parser.parse_known_args(sys_argv[2:])
     # fmt: on
 
+    questions = args.question
+
     db_client = prepare_database(args.database_dir)
     rag_chain = create_rag_chain(db_client)
-    message = rag_chain(args.question)
 
-    if not message or not message.content:
-        raise ValueError("No response from the model")
+    for question in questions:
+        print("\nQuestion: ")
+        print(question)
 
-    print("Question: ")
-    print(args.question)
-    print("\nAnswer: ")
-    print(message.content)
+        message = rag_chain(question)
+        if not message or not message.content:
+            raise ValueError("No response from the model")
+
+        print("\nAnswer: ")
+        print(message.content)
 
 
 def cli_chat(sys_argv: list[str]) -> None:
