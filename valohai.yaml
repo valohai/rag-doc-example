@@ -28,7 +28,6 @@
       - name: question
         description: The question to ask about the documentation
         type: string
-        default: "what is a dataset?"
     inputs:
       - name: embedding_db
         description: Zip archive containing the Qdrant vector database for the embeddings
@@ -44,7 +43,7 @@
         description: Zip archive containing the Qdrant vector database for the embeddings
 
 - pipeline:
-    name: rag-pipeline
+    name: assistant-pipeline
     nodes:
       - name: embeddings
         type: execution
@@ -52,10 +51,34 @@
       - name: smoke-test
         type: execution
         step: single-inference
+        override:
+          parameters:
+            - name: question
+              default: "what is a dataset?"
+    edges:
+      - [embeddings.output.*, smoke-test.input.embedding_db]
+
+
+- pipeline:
+    name: assistant-pipeline-with-deployment
+    nodes:
+      - name: embeddings
+        type: execution
+        step: create-embeddings
+      - name: smoke-test
+        type: execution
+        step: single-inference
+        override:
+          parameters:
+            - name: question
+              default: "what is a dataset?"
       - name: deploy
         type: deployment
-        deployment: valohai-cloud
+        deployment: public
         endpoints: [ask]
+        actions:
+          - when: node-starting
+            then: require-approval
     edges:
       - [embeddings.output.*, smoke-test.input.embedding_db]
       - [embeddings.output.*, deploy.file.ask.embedding_db]
