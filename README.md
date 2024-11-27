@@ -5,6 +5,8 @@
 This repository showcases a Retrieval-Augmented Generation (**RAG**) system for interacting with
 documentation that uses natural language queries to retrieve and summarize relevant information.
 
+[](https://github.com/user-attachments/assets/462ee24c-6798-42b3-8dea-80f37cb49e5f)
+
 [valohai-website]: https://valohai.com/
 
 [valohai-app]: https://app.valohai.com/
