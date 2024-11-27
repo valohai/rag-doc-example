@@ -22,9 +22,9 @@ documentation that uses natural language queries to retrieve and summarize relev
 ## Overview
 
 - Creates a [Qdrant](qdrant-website) vector database for embeddings from the given CSV file(s)
-    - _The vector database is used for fast similarity search to find document snippets_
+    - The vector database is used for fast similarity search to find relevant documentation
     - _We use a CSV based on Hugging Face documentation as an example_
-- Uses OpenAI's embeddings for fast similarity search and GPT models for high-quality responses
+- Uses OpenAI's embeddings for similarity search and GPT models for high-quality responses
 - Provides an interactive interface for querying the documentation using natural language
 - Each query retrieves the most relevant documentation snippets for context
 - Answers include source links for reference
@@ -156,3 +156,8 @@ Similarly, modifying the embedding model is a matter of reimplementing the embed
 
 You can take a look at the input file given to the "embedding" node and create a similar CSV from
 your own documentation and replace the input with that CSV.
+
+### Running it Locally
+
+You can also run the individual pieces locally by following instructions in
+the [DEVELOPMENT](./DEVELOPMENT.md) file.
