@@ -123,8 +123,12 @@ def cli_serve(sys_argv: list[str]) -> None:
 def main():
     load_dotenv()  # load environment variables from `.env`
     debug_value = os.getenv("DEBUG", "0").lower()
-    logging_level = logging.DEBUG if debug_value not in ("0", "false") else logging.WARNING
+
+    command = sys.argv[1] if len(sys.argv) > 1 else None
+    default_level = logging.INFO if command == CREATE_DB_CMD else logging.WARNING
+    logging_level = logging.DEBUG if debug_value not in ("0", "false") else default_level
     logging.basicConfig(level=logging_level)
+
     try:
         status = cli(sys.argv)
     except KeyboardInterrupt:
