@@ -2,7 +2,7 @@
 
 #### <i>aka. RAG Doctor</i> 🧑‍⚕️
 
-This repository implements a Retrieval-Augmented Generation (**RAG**) system for interacting with
+This repository showcases a Retrieval-Augmented Generation (**RAG**) system for interacting with
 documentation that uses natural language queries to retrieve and summarize relevant information.
 
 [valohai-website]: https://valohai.com/
@@ -20,6 +20,7 @@ documentation that uses natural language queries to retrieve and summarize relev
 ## Overview
 
 - Creates a [Qdrant](qdrant-website) vector database for embeddings from the given CSV file(s)
+    - _The vector database is used for fast similarity search to find document snippets_
     - _We use a CSV based on Hugging Face documentation as an example_
 - Uses OpenAI's embeddings for fast similarity search and GPT models for high-quality responses
 - Provides an interactive interface for querying the documentation using natural language
@@ -44,8 +45,7 @@ manually:
 
 3. Save the settings and click "Fetch Repository"
 
-   ![](.github/repository-fetch.png)
-
+   ![](.github/repository-fetch.png)</br>
    This makes sure the project is up to date
 
 4. 🔑 [Create an OpenAI API key](openai-api-keys) for this project
@@ -53,8 +53,7 @@ manually:
 
 5. Assign the API key to this project:
 
-   ![](.github/project-api-key.png)
-
+   ![](.github/project-api-key.png)</br>
    You will see _✅ Changes to OPENAI_API_KEY saved_ if everything went correctly.
 
 And now you are ready to run the pipelines!
