@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import zipfile
 from datetime import datetime, timezone
@@ -117,6 +118,13 @@ def vectorize_documents(db_client: QdrantClient, documents: pd.DataFrame) -> Non
     for i in range(0, len(documents), batch_size):
         batch_number = i // batch_size + 1
         log.info(f"Vectorizing batch {batch_number}/{batch_count}")
+
+        if valohai.config.is_running_in_valohai():
+            progress = min(1.0, batch_number / batch_count)
+            label = "Progress" if progress < 1.0 else "Complete"
+            color = "blue" if progress < 1.0 else "green"
+            gauge = {"type": "gauge", "label": label, "value": progress, "color": color}
+            valohai.set_status_detail(json.dumps(gauge))
 
         batch = documents.iloc[i : i + batch_size]
         texts = batch[CONTENT_COLUMN].tolist()
