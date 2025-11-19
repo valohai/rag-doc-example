@@ -8,7 +8,6 @@ from langchain_core.messages import BaseMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_text_splitters import Tokenizer, split_text_on_tokens
 from qdrant_client import QdrantClient
-from langchain_voyageai import VoyageAIEmbeddings
 from langchain_anthropic import ChatAnthropic
 
 from rag_doctor.consts import (
@@ -18,7 +17,6 @@ from rag_doctor.consts import (
     CONTENT_COLUMN,
     SOURCE_COLUMN,
     PROMPT_MAX_TOKENS,
-    ANTHROPIC_EMBEDDING_MODEL,
     ANTHROPIC_PROMPT_MODEL,
     ANTHROPIC_PROMPT_MAX_TOKENS,
     PROVIDER
@@ -28,13 +26,13 @@ log = logging.getLogger(__name__)
 
 
 def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Callable[[str], BaseMessage]:
+    embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+    
     if provider == "anthropic":
-        embeddings = VoyageAIEmbeddings(model=ANTHROPIC_EMBEDDING_MODEL)
         prompt_model = ChatAnthropic(model=ANTHROPIC_PROMPT_MODEL, temperature=0)
         max_tokens = ANTHROPIC_PROMPT_MAX_TOKENS
         model_name = ANTHROPIC_PROMPT_MODEL
-    else:  
-        embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+    else:
         prompt_model = ChatOpenAI(model=PROMPT_MODEL, temperature=0)
         max_tokens = PROMPT_MAX_TOKENS
         model_name = PROMPT_MODEL
@@ -66,19 +64,22 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
     Answer: """
 
     prompt = PromptTemplate(template=template, input_variables=["context", "question"])
-    prompt_chain = prompt | prompt_model 
+    prompt_chain = prompt | prompt_model
 
-    token_encoder = tiktoken.encoding_for_model(model_name=model_name)  
-
-    def count_tokens(text: str) -> int:
-        return len(token_encoder.encode(text))
+    if provider == "anthropic":
+        def count_tokens(text: str) -> int:
+            return len(text) // 4  
+    else:
+        token_encoder = tiktoken.encoding_for_model(model_name=model_name)
+        def count_tokens(text: str) -> int:
+            return len(token_encoder.encode(text))
 
     template_token_count = count_tokens(template.format(context="", question=""))
 
     def rag_chain(question: str) -> BaseMessage:
         documents = retrieve_related_documents(question)
 
-        remaining_tokens = max_tokens  
+        remaining_tokens = max_tokens
         log.debug(f"tokens at the start:    {remaining_tokens}")
 
         remaining_tokens -= template_token_count
@@ -97,18 +98,26 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
         log.debug(f"tokens after separator: {remaining_tokens}")
 
         documentation = "\n\n".join(doc.page_content for doc in documents)
-        tokenizer = Tokenizer(
-            chunk_overlap=0,
-            decode=token_encoder.decode,
-            encode=lambda text: token_encoder.encode(text),
-            tokens_per_chunk=remaining_tokens,
-        )
-
-        try:
-            truncated_content = split_text_on_tokens(text=documentation, tokenizer=tokenizer)[0]
-        except IndexError:
-            log.exception("Failed to truncated content, skip augmentation:")
-            truncated_content = ""
+        
+        if provider == "anthropic":
+            
+            max_chars = remaining_tokens * 4  
+            if len(documentation) > max_chars:
+                truncated_content = documentation[:max_chars]
+            else:
+                truncated_content = documentation
+        else:
+            tokenizer = Tokenizer(
+                chunk_overlap=0,
+                decode=token_encoder.decode,
+                encode=lambda text: token_encoder.encode(text),
+                tokens_per_chunk=remaining_tokens,
+            )
+            try:
+                truncated_content = split_text_on_tokens(text=documentation, tokenizer=tokenizer)[0]
+            except IndexError:
+                log.exception("Failed to truncated content, skip augmentation:")
+                truncated_content = ""
 
         remaining_tokens -= count_tokens(truncated_content)
         log.debug(f"tokens after docs:      {remaining_tokens}")
