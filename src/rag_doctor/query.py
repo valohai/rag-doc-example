@@ -8,6 +8,8 @@ from langchain_core.messages import BaseMessage
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
 from langchain_text_splitters import Tokenizer, split_text_on_tokens
 from qdrant_client import QdrantClient
+from langchain_voyageai import VoyageAIEmbeddings
+from langchain_anthropic import ChatAnthropic
 
 from rag_doctor.consts import (
     COLLECTION_NAME,
@@ -16,13 +18,29 @@ from rag_doctor.consts import (
     CONTENT_COLUMN,
     SOURCE_COLUMN,
     PROMPT_MAX_TOKENS,
+    ANTHROPIC_EMBEDDING_MODEL,
+    ANTHROPIC_PROMPT_MODEL,
+    ANTHROPIC_PROMPT_MAX_TOKENS,
+    PROVIDER
 )
 
 log = logging.getLogger(__name__)
 
 
-def create_rag_chain(db_client: QdrantClient) -> Callable[[str], BaseMessage]:
-    embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Callable[[str], BaseMessage]:
+    if provider == "anthropic":
+        from langchain_voyageai import VoyageAIEmbeddings
+        from langchain_anthropic import ChatAnthropic
+        
+        embeddings = VoyageAIEmbeddings(model=ANTHROPIC_EMBEDDING_MODEL)
+        prompt_model = ChatAnthropic(model=ANTHROPIC_PROMPT_MODEL, temperature=0)
+        max_tokens = ANTHROPIC_PROMPT_MAX_TOKENS
+        model_name = ANTHROPIC_PROMPT_MODEL
+    else:  # default to openai
+        embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
+        prompt_model = ChatOpenAI(model=PROMPT_MODEL, temperature=0)
+        max_tokens = PROMPT_MAX_TOKENS
+        model_name = PROMPT_MODEL
 
     def retrieve_related_documents(query: str) -> List[Document]:
         query_vector = embeddings.embed_query(query)

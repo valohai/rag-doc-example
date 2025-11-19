@@ -3,6 +3,7 @@ import logging
 import os
 import sys
 
+from rag_doctor.consts import PROVIDER
 import valohai
 from dotenv import load_dotenv
 
@@ -52,6 +53,7 @@ def cli_create_database(sys_argv: list[str]) -> None:
     parser.add_argument("--content_column_index", type=int, default=0, help="Index of the document content column in the CSV files")
     parser.add_argument("--source_column_index", type=int, default=1, help="Index of the source link column in the CSV files")
     parser.add_argument("--header_row_skip", type=int, default=0, help="Number of initial rows to skip in the CSV files i.e. the header rows")
+    parser.add_argument("--provider", type=str, default=PROVIDER, choices=["openai", "anthropic"], help="LLM provider to use")
     args, _ = parser.parse_known_args(sys_argv[2:])
     # fmt: on
 
@@ -61,6 +63,7 @@ def cli_create_database(sys_argv: list[str]) -> None:
         source_column_index=args.source_column_index,
         header_row_skip=args.header_row_skip,
         database_dir=args.database_dir,
+        provider=args.provider, 
     )
 
 
@@ -69,6 +72,7 @@ def cli_query(sys_argv: list[str]) -> None:
     db_dir_on_valohai = valohai.inputs("embedding_db").dir_path()
     parser = argparse.ArgumentParser()
     parser.add_argument("--database_dir", type=str, default=db_dir_on_valohai, help="Path to directory containing Qdrant vector database")
+    parser.add_argument("--provider", type=str, default=PROVIDER, choices=["openai", "anthropic"], help="LLM provider to use")
     parser.add_argument("--question", type=str, required=True, help="Question to ask", action="append")
     args, _ = parser.parse_known_args(sys_argv[2:])
     # fmt: on
@@ -76,8 +80,8 @@ def cli_query(sys_argv: list[str]) -> None:
     questions = args.question
 
     db_client = prepare_database(args.database_dir)
-    rag_chain = create_rag_chain(db_client)
-
+    rag_chain = create_rag_chain(db_client, provider=args.provider)
+    
     for question in questions:
         print("\nQuestion: ")
         print(question)
@@ -95,6 +99,7 @@ def cli_chat(sys_argv: list[str]) -> None:
     db_dir_on_valohai = valohai.inputs("embedding_db").dir_path()
     parser = argparse.ArgumentParser()
     parser.add_argument("--database_dir", type=str, default=db_dir_on_valohai, help="Path to directory containing Qdrant vector database")
+    parser.add_argument("--provider", type=str, default=PROVIDER, choices=["openai", "anthropic"], help="LLM provider to use")
     args, _ = parser.parse_known_args(sys_argv[2:])
     # fmt: on
 
@@ -107,6 +112,7 @@ def cli_serve(sys_argv: list[str]) -> None:
     db_dir_on_valohai = valohai.inputs("embedding_db").dir_path()
     parser = argparse.ArgumentParser()
     parser.add_argument("--database_dir", type=str, default=db_dir_on_valohai, help="Path to directory containing Qdrant vector database")
+    parser.add_argument("--provider", type=str, default=PROVIDER, choices=["openai", "anthropic"], help="LLM provider to use")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind the server to")
     parser.add_argument("--port", type=int, default=8000, help="Port to bind the server to")
     args, _ = parser.parse_known_args(sys_argv[2:])
@@ -116,7 +122,7 @@ def cli_serve(sys_argv: list[str]) -> None:
     from rag_doctor.server import create_app
 
     db_client = prepare_database(args.database_dir)
-    app = create_app(db_client)
+    app = create_app(db_client, args.provider)
     uvicorn.run(app, host=args.host, port=args.port)
 
 

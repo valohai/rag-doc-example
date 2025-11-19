@@ -15,6 +15,11 @@
         description: Number of initial rows to skip in the CSV files i.e. the header rows
         type: integer
         default: 0
+      - name: provider                    
+        description: LLM provider to use (openai or anthropic)
+        type: string
+        default: openai
+        choices: [openai, anthropic]      
     inputs:
       - name: documentation_csv
         description: CSV file(s) containing the technical documentation
@@ -29,6 +34,11 @@
         description: The question(s) to ask about the documentation
         type: string
         multiple: repeat
+      - name: provider                   
+        description: LLM provider to use (openai or anthropic)
+        type: string
+        default: openai
+        choices: [openai, anthropic]      
     inputs:
       - name: embedding_db
         description: Zip archive containing the Qdrant vector database for the embeddings
@@ -37,7 +47,7 @@
     name: ask
     image: ghcr.io/astral-sh/uv:python3.11-bookworm-slim
     port: 8000
-    server-command: uv run --group server rag-doctor serve --host 0.0.0.0 --database_dir ./qdrant_data
+    server-command: uv run --group server rag-doctor serve --host 0.0.0.0 --database_dir ./qdrant_data --provider openai
     files:
       - name: embedding_db
         path: qdrant_data/embeddings.zip
@@ -49,6 +59,10 @@
       - name: embeddings
         type: execution
         step: create-embeddings
+        override:                        
+          parameters:
+            - name: provider
+              default: anthropic
       - name: manual-evaluation
         type: execution
         step: do-query
@@ -56,6 +70,8 @@
           parameters:
             - name: question
               default: ["who is Michael Jordan?", "what is a dataset?", "hello", "how to create a model?"]
+            - name: provider              
+              default: anthropic
     edges:
       - [embeddings.output.*, manual-evaluation.input.embedding_db]
 

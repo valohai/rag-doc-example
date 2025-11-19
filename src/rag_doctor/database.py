@@ -11,11 +11,15 @@ import valohai.config
 from langchain_openai import OpenAIEmbeddings
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
+from langchain_voyageai import VoyageAIEmbeddings
 
 from rag_doctor.consts import (
+    ANTHROPIC_EMBEDDING_MODEL,
+    ANTHROPIC_EMBEDDING_LENGTH,
     EMBEDDING_MODEL,
     EMBEDDING_LENGTH,
     CONTENT_COLUMN,
+    PROVIDER,
     SOURCE_COLUMN,
     COLLECTION_NAME,
 )
@@ -30,6 +34,7 @@ def create_database(
     source_column_index: int,
     header_row_skip: int,
     database_dir: str,
+    provider: str = PROVIDER,
 ):
     documents = gather_documentation(
         documentation_dir=documentation_dir,
@@ -101,20 +106,32 @@ def gather_documentation(
     return merged_documents
 
 
-def create_qdrant_collection(db_client: QdrantClient) -> None:
+def create_qdrant_collection(db_client: QdrantClient, provider: str = PROVIDER) -> None:
     log.info("Creating Qdrant collection for the embeddings...")
     collections = db_client.get_collections().collections
     if not any(collection.name == COLLECTION_NAME for collection in collections):
-        config = models.VectorParams(size=EMBEDDING_LENGTH, distance=models.Distance.COSINE)
+        if provider == "anthropic":
+            embedding_length = ANTHROPIC_EMBEDDING_LENGTH
+        else:
+            embedding_length = EMBEDDING_LENGTH
+            
+        config = models.VectorParams(size=embedding_length, distance=models.Distance.COSINE)
         db_client.create_collection(collection_name=COLLECTION_NAME, vectors_config=config)
 
 
-def vectorize_documents(db_client: QdrantClient, documents: pd.DataFrame) -> None:
+def vectorize_documents(db_client: QdrantClient, documents: pd.DataFrame, provider: str = PROVIDER) -> None:
     batch_size = 100
-    embeddings = OpenAIEmbeddings(
-        model=EMBEDDING_MODEL,
-        chunk_size=20, # smaller chunk size to avoid token limits
-    )
+    
+    if provider == "anthropic":
+        embeddings = VoyageAIEmbeddings(
+            model=ANTHROPIC_EMBEDDING_MODEL,
+            batch_size=20,
+        )
+    else:  # default to openai
+        embeddings = OpenAIEmbeddings(
+            model=EMBEDDING_MODEL,
+            chunk_size=20,
+        )
     batch_count = (len(documents) // batch_size) + 1
 
     log.info("Vectorizing documents...")
