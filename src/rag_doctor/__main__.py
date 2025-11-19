@@ -104,7 +104,7 @@ def cli_chat(sys_argv: list[str]) -> None:
     # fmt: on
 
     db_client = prepare_database(args.database_dir)
-    start_chat(db_client=db_client)
+    start_chat(db_client=db_client, provider=args.provider)
 
 
 def cli_serve(sys_argv: list[str]) -> None:

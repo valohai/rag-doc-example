@@ -29,14 +29,11 @@ log = logging.getLogger(__name__)
 
 def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Callable[[str], BaseMessage]:
     if provider == "anthropic":
-        from langchain_voyageai import VoyageAIEmbeddings
-        from langchain_anthropic import ChatAnthropic
-        
         embeddings = VoyageAIEmbeddings(model=ANTHROPIC_EMBEDDING_MODEL)
         prompt_model = ChatAnthropic(model=ANTHROPIC_PROMPT_MODEL, temperature=0)
         max_tokens = ANTHROPIC_PROMPT_MAX_TOKENS
         model_name = ANTHROPIC_PROMPT_MODEL
-    else:  # default to openai
+    else:  
         embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
         prompt_model = ChatOpenAI(model=PROMPT_MODEL, temperature=0)
         max_tokens = PROMPT_MAX_TOKENS
@@ -69,10 +66,9 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
     Answer: """
 
     prompt = PromptTemplate(template=template, input_variables=["context", "question"])
-    prompt_model = ChatOpenAI(model=PROMPT_MODEL, temperature=0)
-    prompt_chain = prompt | prompt_model
+    prompt_chain = prompt | prompt_model 
 
-    token_encoder = tiktoken.encoding_for_model(model_name=PROMPT_MODEL)
+    token_encoder = tiktoken.encoding_for_model(model_name=model_name)  
 
     def count_tokens(text: str) -> int:
         return len(token_encoder.encode(text))
@@ -82,7 +78,7 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
     def rag_chain(question: str) -> BaseMessage:
         documents = retrieve_related_documents(question)
 
-        remaining_tokens = PROMPT_MAX_TOKENS
+        remaining_tokens = max_tokens  
         log.debug(f"tokens at the start:    {remaining_tokens}")
 
         remaining_tokens -= template_token_count

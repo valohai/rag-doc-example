@@ -46,8 +46,8 @@ def create_database(
     Path(database_dir).mkdir(exist_ok=True)
     db_client = QdrantClient(path=database_dir)
 
-    create_qdrant_collection(db_client)
-    vectorize_documents(db_client, documents)
+    create_qdrant_collection(db_client, provider)  
+    vectorize_documents(db_client, documents, provider)  
 
     if valohai.config.is_running_in_valohai():
         package_database(database_dir)
