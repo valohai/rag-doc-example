@@ -10,5 +10,5 @@ SOURCE_COLUMN = "source"
 
 PROVIDER = "openai"  
 
-ANTHROPIC_PROMPT_MODEL = "claude-3-5-sonnet"
+ANTHROPIC_PROMPT_MODEL = "claude-haiku-4-5"
 ANTHROPIC_PROMPT_MAX_TOKENS = 200_000
