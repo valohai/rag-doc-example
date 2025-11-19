@@ -11,7 +11,6 @@ import valohai.config
 from langchain_openai import OpenAIEmbeddings
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
-from langchain_voyageai import VoyageAIEmbeddings
 
 from rag_doctor.consts import (
     EMBEDDING_MODEL,
