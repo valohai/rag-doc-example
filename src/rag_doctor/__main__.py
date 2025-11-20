@@ -53,7 +53,6 @@ def cli_create_database(sys_argv: list[str]) -> None:
     parser.add_argument("--content_column_index", type=int, default=0, help="Index of the document content column in the CSV files")
     parser.add_argument("--source_column_index", type=int, default=1, help="Index of the source link column in the CSV files")
     parser.add_argument("--header_row_skip", type=int, default=0, help="Number of initial rows to skip in the CSV files i.e. the header rows")
-    parser.add_argument("--provider", type=str, default=PROVIDER, choices=["openai", "anthropic"], help="LLM provider to use")
     args, _ = parser.parse_known_args(sys_argv[2:])
     # fmt: on
 
@@ -63,7 +62,6 @@ def cli_create_database(sys_argv: list[str]) -> None:
         source_column_index=args.source_column_index,
         header_row_skip=args.header_row_skip,
         database_dir=args.database_dir,
-        provider=args.provider, 
     )
 
 

@@ -16,7 +16,6 @@ from rag_doctor.consts import (
     EMBEDDING_MODEL,
     EMBEDDING_LENGTH,
     CONTENT_COLUMN,
-    PROVIDER,
     SOURCE_COLUMN,
     COLLECTION_NAME,
 )
@@ -31,7 +30,6 @@ def create_database(
     source_column_index: int,
     header_row_skip: int,
     database_dir: str,
-    provider: str = PROVIDER,
 ):
     documents = gather_documentation(
         documentation_dir=documentation_dir,
