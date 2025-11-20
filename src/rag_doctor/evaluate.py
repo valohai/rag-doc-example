@@ -81,16 +81,16 @@ Rating (just return the number):"""
     estimated_cost = (estimated_tokens * 0.000002) + (len(data) * 0.0001)  # Token cost + retrieval cost
 
     # Log metrics to Valohai
-    valohai.metadata.set("response_rate", response_rate)
-    valohai.metadata.set("confidence_rate", confidence_rate)
-    valohai.metadata.set("factuality_score", factuality_score)
-    valohai.metadata.set("avg_response_length", avg_length)
-    valohai.metadata.set("substantive_rate", substantive_rate)
-    valohai.metadata.set("total_questions", len(data))
-    valohai.metadata.set("estimated_latency_seconds", round(estimated_latency, 3))
-    valohai.metadata.set("estimated_cost_usd", round(estimated_cost, 4))
-
-    log.info("Evaluation metrics logged to execution metadata")
+    with valohai.logger() as logger:
+        logger.log("response_rate", response_rate)
+        logger.log("confidence_rate", confidence_rate)
+        logger.log("factuality_score", factuality_score)
+        logger.log("avg_response_length", avg_length)
+        logger.log("substantive_rate", substantive_rate)
+        logger.log("total_questions", len(data))
+        logger.log("estimated_latency_seconds", round(estimated_latency, 3))
+        logger.log("estimated_cost_usd", round(estimated_cost, 4))
+        log.info("Evaluation metrics logged to execution metadata")
     
     # Log organized summary
     log.info("=== RETRIEVAL METRICS ===")
