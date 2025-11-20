@@ -38,6 +38,14 @@
       - name: embedding_db
         description: Zip archive containing the Qdrant vector database for the embeddings
 
+- step:
+    name: evaluate-rag
+    image: ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+    command: uv run rag-doctor evaluate {parameters}
+    inputs:
+      - name: responses
+        description: JSON file(s) containing generated responses to evaluate
+
 - endpoint:
     name: ask
     image: ghcr.io/astral-sh/uv:python3.11-bookworm-slim
@@ -88,3 +96,23 @@
     edges:
       - [embeddings.output.*, manual-evaluation.input.embedding_db]
       - [embeddings.output.*, deploy.file.ask.embedding_db]
+
+- pipeline:
+    name: rag-evaluation-pipeline
+    nodes:
+      - name: embeddings
+        type: execution
+        step: create-embeddings
+      - name: generate-responses
+        type: execution
+        step: do-query
+        override:
+          parameters:
+            - name: question
+              default: ["who is Michael Jordan?", "what is a dataset?", "hello", "how to create a model?"]
+      - name: evaluate
+        type: execution
+        step: evaluate-rag
+    edges:
+      - [embeddings.output.*, generate-responses.input.embedding_db]
+      - [generate-responses.output.*, evaluate.input.responses]
