@@ -2,6 +2,7 @@ import json
 import logging
 import numpy as np
 from pathlib import Path
+import pandas as pd
 
 import valohai
 from langchain_openai import ChatOpenAI
@@ -26,16 +27,32 @@ def evaluate_responses(responses_dir: str) -> None:
 
     log.info(f"Evaluating {len(data)} responses")
 
-    # 1. RETRIEVAL METRICS 
-    # (proxy metrics using available data)
+    # 1. RETRIEVAL METRICS (using gold standards)
+
+    # Load gold standards 
+    gold_standards_file = valohai.inputs("gold_standards").path()
+    gold_df = pd.read_csv(gold_standards_file)
+
+    gold_lookup = {}
+    for _, row in gold_df.iterrows():
+        question = row['question']
+        gold_indices = [int(x.strip()) for x in str(row['gold_doc_indices']).split(',') if x.strip()]
+        gold_lookup[question] = set(gold_indices)
+
+    recall_scores = []
+    for d in data:
+        question = d["question"]
+        retrieved = set(d.get("retrieved_indices", []))
+        gold = gold_lookup.get(question, set())
+        
+        if len(gold) > 0:
+            recall = len(retrieved & gold) / len(gold)
+            recall_scores.append(recall)
+
+    recall_at_k = np.mean(recall_scores) if recall_scores else 0.0
+
     valid_responses = [d for d in data if d.get("answer", "").strip()]
     response_rate = len(valid_responses) / len(data) if data else 0
-    
-    # Proxy for retrieval quality: responses that show confidence vs uncertainty
-    confident_responses = sum(1 for d in data 
-                             if not any(phrase in d.get("answer", "").lower() 
-                                       for phrase in ["don't know", "not sure", "unclear", "i'm not", "cannot find"]))
-    confidence_rate = confident_responses / len(data) if data else 0
 
     # 2. GENERATION METRICS
     # Factuality via LLM-as-a-judge (sample evaluation)
@@ -64,7 +81,6 @@ Rating (just return the number):"""
     else:
         factuality_score = 0.0
 
-    # Response quality metrics
     avg_length = np.mean([len(d.get("answer", "")) for d in data]) if data else 0
     
     # Completeness: responses that provide substantive answers
@@ -72,8 +88,7 @@ Rating (just return the number):"""
     substantive_rate = substantive_responses / len(data) if data else 0
 
     # 3. OPERATIONAL METRICS
-    # Estimate latency (would be measured in real implementation)
-    estimated_latency = 1.2 + (avg_length * 0.001)  # Longer responses take slightly more time
+    estimated_latency = 1.2 + (avg_length * 0.001)  
     
     # Estimate cost based on token usage
     total_chars = sum(len(d.get("answer", "")) for d in data)
@@ -83,7 +98,7 @@ Rating (just return the number):"""
     # Log metrics to Valohai
     with valohai.logger() as logger:
         logger.log("response_rate", response_rate)
-        logger.log("confidence_rate", confidence_rate)
+        logger.log("recall_at_k", recall_at_k)
         logger.log("factuality_score", factuality_score)
         logger.log("avg_response_length", avg_length)
         logger.log("substantive_rate", substantive_rate)
@@ -96,8 +111,8 @@ Rating (just return the number):"""
     print("Evaluation metrics logged to execution metadata")
     print()
     print("=== RETRIEVAL METRICS ===")
+    print(f"Recall@K: {recall_at_k:.2%}")
     print(f"Response rate: {response_rate:.2%}")
-    print(f"Confidence rate: {confidence_rate:.2%}")
     print()
     print("=== GENERATION METRICS ===")
     print(f"Factuality score: {factuality_score}/5")

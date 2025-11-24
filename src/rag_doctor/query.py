@@ -43,6 +43,7 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
             collection_name=COLLECTION_NAME, query_vector=query_vector, limit=3
         )
         documents = []
+        retrieved_indices = []
         for result in results:
             documents.append(
                 Document(
@@ -50,7 +51,8 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
                     metadata={SOURCE_COLUMN: result.payload[SOURCE_COLUMN]},
                 )
             )
-        return documents
+            retrieved_indices.append(result.id)
+        return documents, retrieved_indices
 
     template = """You are a helpful AI assistant that answers questions about technical documentation.
     Use the following documentation excerpts to answer the question. If you don't know the answer, 
