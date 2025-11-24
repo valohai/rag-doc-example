@@ -78,8 +78,8 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
 
     template_token_count = count_tokens(template.format(context="", question=""))
 
-    def rag_chain(question: str) -> BaseMessage:
-        documents = retrieve_related_documents(question)
+    def rag_chain(question: str) -> tuple[BaseMessage, List[int]]:
+        documents, retrieved_indices = retrieve_related_documents(question)
 
         remaining_tokens = max_tokens
         log.debug(f"tokens at the start:    {remaining_tokens}")
@@ -126,6 +126,6 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
 
         context = f"{truncated_content}{separator}{sources_bullet_points}"
         message = prompt_chain.invoke(input={"context": context, "question": question})
-        return message
+        return message, retrieved_indices
 
     return rag_chain
