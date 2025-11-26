@@ -50,6 +50,27 @@ def evaluate_responses(responses_dir: str) -> None:
 
     recall_at_k = np.mean(recall_scores) if recall_scores else 0.0
 
+    print("=== DEBUG INFO ===")
+    print("Gold standard questions (lowercase):")
+    for question in gold_lookup.keys():
+        print(f"  - '{question}'")
+
+    print("\nEvaluation matching:")
+    for d in data:
+        question_lower = d["question"].lower()
+        retrieved = set(d.get("retrieved_indices", []))
+        gold = gold_lookup.get(question_lower, set())
+        print(f"Original question: '{d['question']}'")
+        print(f"Lowercase question: '{question_lower}'")
+        print(f"Found in gold standards: {question_lower in gold_lookup}")
+        print(f"Retrieved indices: {retrieved}")
+        print(f"Gold indices: {gold}")
+        if len(gold) > 0:
+            recall = len(retrieved & gold) / len(gold)
+            print(f"Recall: {recall:.2%}")
+        print()
+    print("=== END DEBUG ===")
+
     valid_responses = [d for d in data if d.get("answer", "").strip()]
     response_rate = len(valid_responses) / len(data) if data else 0
 
