@@ -46,8 +46,8 @@
       - name: responses
         description: JSON file(s) containing generated responses to evaluate
       - name: gold_standards
-        description: CSV file containing gold standard retrieval indices for evaluation
-        default: datum://019ab653-a0ee-17b5-3401-99e618e2c81e
+        description: CSV file containing ground truth answers for evaluation
+        default: datum://019ac59c-2e85-ea03-6c30-a422ccaf162b
 
 - endpoint:
     name: ask

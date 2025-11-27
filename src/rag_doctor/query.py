@@ -43,7 +43,7 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
             collection_name=COLLECTION_NAME, query_vector=query_vector, limit=3
         )
         documents = []
-        retrieved_indices = []
+        retrieved_contents = []
         for result in results:
             documents.append(
                 Document(
@@ -51,8 +51,8 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
                     metadata={SOURCE_COLUMN: result.payload[SOURCE_COLUMN]},
                 )
             )
-            retrieved_indices.append(result.id)
-        return documents, retrieved_indices
+            retrieved_contents.append(result.payload[CONTENT_COLUMN])
+        return documents, retrieved_contents
 
     template = """You are a helpful AI assistant that answers questions about technical documentation.
     Use the following documentation excerpts to answer the question. If you don't know the answer, 
@@ -79,7 +79,7 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
     template_token_count = count_tokens(template.format(context="", question=""))
 
     def rag_chain(question: str) -> tuple[BaseMessage, List[int]]:
-        documents, retrieved_indices = retrieve_related_documents(question)
+        documents, retrieved_contents = retrieve_related_documents(question)
 
         remaining_tokens = max_tokens
         log.debug(f"tokens at the start:    {remaining_tokens}")
@@ -126,6 +126,6 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
 
         context = f"{truncated_content}{separator}{sources_bullet_points}"
         message = prompt_chain.invoke(input={"context": context, "question": question})
-        return message, retrieved_indices
+        return message, retrieved_contents
 
     return rag_chain

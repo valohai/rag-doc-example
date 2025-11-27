@@ -89,7 +89,7 @@ def cli_query(sys_argv: list[str]) -> None:
         print("\nQuestion: ")
         print(question)
 
-        message, retrieved_indices = rag_chain(question)
+        message, retrieved_contents = rag_chain(question)
         if not message or not message.content:
             raise ValueError("No response from the model")
 
@@ -100,7 +100,7 @@ def cli_query(sys_argv: list[str]) -> None:
             "question": question,
             "answer": message.content,
             "provider": args.provider,
-            "retrieved_indices": retrieved_indices,
+            "retrieved_contents": retrieved_contents,
         })
 
     # After the loop ends, save the data:
