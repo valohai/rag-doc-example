@@ -112,7 +112,7 @@
         override:
           parameters:
             - name: question
-              default: ["who is Michael Jordan?", "what is a dataset?", "hello", "how to create a model?"]
+              default: ["what is a dataset?", "how to create a model?", "What is an Inference Endpoint?", "How do I create an Inference Endpoint?", "How can I choose a metric for my task?"]
       - name: evaluate
         type: execution
         step: evaluate-rag
