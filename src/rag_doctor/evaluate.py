@@ -17,15 +17,24 @@ def normalize_text(text: str) -> str:
     return " ".join(text.lower().split())
 
 
-def recall_at_k(retrieved_contents: list[str], ground_truth: str, k: int = 3) -> float:
-    """Check if ground truth info is contained in top-k retrieved docs."""
-    gt_norm = normalize_text(ground_truth)
+def extract_key_terms(text: str) -> set:
+    """Extract key terms (longer words likely to be meaningful)."""
+    normalized = normalize_text(text)
+    words = set(word.strip('.,;:!?()[]"\'') for word in normalized.split())
+    return {w for w in words if len(w) >= 5}
+
+
+def recall_at_k(retrieved_contents: list, ground_truth: str, k: int = 3) -> float:
+    """Check if key terms from ground truth appear in top-k retrieved docs."""
+    gt_terms = extract_key_terms(ground_truth)
     
-    for doc in retrieved_contents[:k]:
-        doc_norm = normalize_text(doc)
-        if gt_norm in doc_norm or doc_norm in gt_norm:
-            return 1.0
-    return 0.0
+    if not gt_terms:
+        return 0.0
+    
+    retrieved_text = normalize_text(" ".join(retrieved_contents[:k]))
+    matched_terms = sum(1 for term in gt_terms if term in retrieved_text)
+    
+    return matched_terms / len(gt_terms)
 
 
 def evaluate_responses(responses_dir: str) -> None:
