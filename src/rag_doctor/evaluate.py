@@ -161,6 +161,11 @@ def evaluate_responses(responses_dir: str) -> None:
     # Find all JSON files
     json_files = list(responses_path.glob("*.json"))
     
+    print(f"Debug: JSON files found: {[f.name for f in json_files]}")
+    print(f"Debug: Full paths: {[str(f) for f in json_files]}")
+    for f in json_files:
+        print(f"Debug: File {f.name} size: {f.stat().st_size} bytes")
+
     if not json_files:
         raise ValueError(f"No JSON files found in {responses_path}")
     
