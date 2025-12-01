@@ -45,34 +45,11 @@ Return only a decimal number:"""
         return 0.0
 
 
-def evaluate_responses(responses_dir: str) -> None:
-    """Evaluate RAG responses using retrieval metrics and LLM-as-a-judge."""
-
-    log.info("Loading response data for evaluation...")
-
-    responses_file = Path(responses_dir) / "responses.json"
-    if not responses_file.exists():
-        raise ValueError(f"Response file not found: {responses_file}")
-
-    with open(responses_file) as f:
-        data = json.load(f)
-
-    log.info(f"Evaluating {len(data)} responses")
-
-    # Load ground truth
-    gold_standards_file = valohai.inputs("gold_standards").path()
-    gold_df = pd.read_csv(gold_standards_file)
-
-    gold_lookup = {}
-    for _, row in gold_df.iterrows():
-        question = row['question'].strip().lower()
-        gold_lookup[question] = {
-            "answer": row['ground_truth_answer'],
-            "source": row.get('source', ''),
-        }
-
-    # Initialize LLM judge
-    prompt_model = ChatOpenAI(model=PROMPT_MODEL, temperature=0)
+def evaluate_provider(data: list, provider: str, gold_lookup: dict, prompt_model) -> dict:
+    """Evaluate responses from a single provider."""
+    
+    print(f"\n=== EVALUATING {provider.upper()} PROVIDER ===")
+    print(f"Processing {len(data)} responses...")
 
     # 1. RETRIEVAL METRICS (LLM-as-judge)
     recall_scores = []
@@ -93,14 +70,14 @@ def evaluate_responses(responses_dir: str) -> None:
                 retrieved_contents, ground_truth, d["question"], prompt_model
             )
             recall_scores.append(recall)
-            log.info(f"Question: {d['question'][:50]}... -> Recall: {recall:.2%}")
+            print(f"Question: {d['question'][:50]}... -> Recall: {recall:.2%}")
 
     recall_at_k_score = np.mean(recall_scores) if recall_scores else 0.0
 
     valid_responses = [d for d in data if d.get("answer", "").strip()]
     response_rate = len(valid_responses) / len(data) if data else 0
 
-    # 2. GENERATION METRICS - Factuality via LLM-as-a-judge (all substantive responses)
+    # 2. GENERATION METRICS - Factuality via LLM-as-a-judge
     factuality_scores = []
     substantive = [r for r in valid_responses if len(r.get("answer", "")) > 100]
     
@@ -138,30 +115,86 @@ Rating (just return the number):"""
     estimated_tokens = total_chars // 4
     estimated_cost = (estimated_tokens * 0.000002) + (len(data) * 0.0001)
 
-    # Log metrics to Valohai
+    # Collect metrics for return
+    metrics = {
+        "response_rate": response_rate,
+        "recall_at_k": recall_at_k_score,
+        "factuality_score": factuality_score,
+        "avg_response_length": avg_length,
+        "substantive_rate": substantive_rate,
+        "total_questions": len(data),
+        "estimated_latency_seconds": round(estimated_latency, 3),
+        "estimated_cost_usd": round(estimated_cost, 4)
+    }
+
     with valohai.logger() as logger:
-        logger.log("response_rate", response_rate)
-        logger.log("recall_at_k", recall_at_k_score)
-        logger.log("factuality_score", factuality_score)
-        logger.log("avg_response_length", avg_length)
-        logger.log("substantive_rate", substantive_rate)
-        logger.log("total_questions", len(data))
-        logger.log("estimated_latency_seconds", round(estimated_latency, 3))
-        logger.log("estimated_cost_usd", round(estimated_cost, 4))
-        log.info("Evaluation metrics logged to execution metadata")
+        for metric_name, value in metrics.items():
+            logger.log(f"{metric_name}_{provider}", value)
+
+    # Print organized summary
+    print(f"\n=== {provider.upper()} RESULTS ===")
+    print("RETRIEVAL METRICS:")
+    print(f"  Recall@K: {recall_at_k_score:.2%}")
+    print(f"  Response rate: {response_rate:.2%}")
+    print()
+    print("GENERATION METRICS:")
+    print(f"  Factuality score: {factuality_score}/5")
+    print(f"  Average response length: {avg_length:.1f} characters")
+    print(f"  Substantive response rate: {substantive_rate:.2%}")
+    print()
+    print("OPERATIONAL METRICS:")
+    print(f"  Total questions evaluated: {len(data)}")
+    print(f"  Estimated latency: {estimated_latency:.3f} seconds")
+    print(f"  Estimated cost: ${estimated_cost:.4f} USD")
+    print(f"=== END {provider.upper()} RESULTS ===")
+
+    return metrics
+
+
+def evaluate_responses(responses_dir: str) -> None:
+    """Evaluate RAG responses from multiple providers."""
+
+    log.info("Loading response data for evaluation...")
+
+    responses_path = Path(responses_dir)
     
-    print("Evaluation metrics logged to execution metadata")
-    print()
-    print("=== RETRIEVAL METRICS ===")
-    print(f"Recall@K: {recall_at_k_score:.2%}")
-    print(f"Response rate: {response_rate:.2%}")
-    print()
-    print("=== GENERATION METRICS ===")
-    print(f"Factuality score: {factuality_score}/5")
-    print(f"Average response length: {avg_length:.1f} characters")
-    print(f"Substantive response rate: {substantive_rate:.2%}")
-    print()
-    print("=== OPERATIONAL METRICS ===")
-    print(f"Total questions evaluated: {len(data)}")
-    print(f"Estimated latency: {estimated_latency:.3f} seconds")
-    print(f"Estimated cost: ${estimated_cost:.4f} USD")
+    # Find all JSON files
+    json_files = list(responses_path.glob("*.json"))
+    
+    if not json_files:
+        raise ValueError(f"No JSON files found in {responses_path}")
+    
+    print(f"Found {len(json_files)} response file(s) to evaluate")
+
+    # Load ground truth once
+    gold_standards_file = valohai.inputs("gold_standards").path()
+    gold_df = pd.read_csv(gold_standards_file)
+
+    gold_lookup = {}
+    for _, row in gold_df.iterrows():
+        question = row['question'].strip().lower()
+        gold_lookup[question] = {
+            "answer": row['ground_truth_answer'],
+            "source": row.get('source', ''),
+        }
+
+    # LLM judge
+    prompt_model = ChatOpenAI(model=PROMPT_MODEL, temperature=0)
+
+    all_metrics = {}
+    
+    for json_file in json_files:
+        with open(json_file) as f:
+            data = json.load(f)
+        
+        if not data:
+            print(f"Skipping empty file: {json_file.name}")
+            continue
+        
+        provider = data[0].get("provider", json_file.stem) 
+        
+        metrics = evaluate_provider(data, provider, gold_lookup, prompt_model)
+        all_metrics[provider] = metrics
+
+    print(f"\nEvaluation complete! Processed {len(all_metrics)} provider(s)")
+    log.info("All evaluation metrics logged to execution metadata")
