@@ -157,7 +157,7 @@ Similarly, modifying the embedding model is a matter of reimplementing the embed
 This repository includes a comprehensive evaluation system that measures RAG performance across three key dimensions: retrieval quality, generation accuracy, and operational efficiency.
 
 <details>
-<summary>🔍 Show Me the Evaluation Pipeline!</summary>
+<summary>🤩 Show Me!</summary>
 
 #### What Gets Evaluated
 
@@ -221,6 +221,16 @@ The pipeline includes gold standard questions with ground truth answers for eval
 3. Modifying the questions in the pipeline configuration
 
 This evaluation framework follows MLOps best practices, providing the metrics needed to maintain and improve your RAG system in production.
+
+### Multi-Provider Comparison
+You can compare different LLM providers (OpenAI vs Anthropic) side-by-side to understand their performance characteristics and make informed decisions about which model works best for your use case, by leveraging the **Task** feature in Valohai. 
+
+1. Navigate to the "Pipelines" tab and create a new pipeline
+2. Select the "rag-evaluation-pipeline" template
+3. Select the `generate-responses` node and convert it to a Task.
+   ![](.github/rag-evaluate-task.png)
+
+This comparison helps you make data-driven decisions about which provider offers the best balance of performance, cost, and quality for your specific use case.
 
 </details>
 
