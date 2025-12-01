@@ -105,7 +105,7 @@ def cli_query(sys_argv: list[str]) -> None:
 
     # After the loop ends, save the data:
     if valohai.config.is_running_in_valohai():
-        output_path = valohai.outputs().path("responses.json")
+        output_path = valohai.outputs().path(f"responses_{args.provider}.json")
         with open(output_path, 'w') as f:
             json.dump(responses_data, f, indent=2)
         print(f"Responses saved to {output_path}")
