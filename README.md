@@ -230,7 +230,7 @@ You can compare different LLM providers (OpenAI vs Anthropic) side-by-side to un
 3. Select the `generate-responses` node and convert it to a Task.
    ![](.github/rag-evaluate-task.png)
 
-This comparison helps you make data-driven decisions about which provider offers the best balance of performance, cost, and quality for your specific use case.
+This will automatically create executions for the model providers available in the `provider` parameter.
 
 </details>
 
