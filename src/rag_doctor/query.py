@@ -1,21 +1,21 @@
 import logging
-from typing import List, Callable
+from typing import Callable, List
 
 import tiktoken
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
 from langchain_core.messages import BaseMessage
-from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_text_splitters import Tokenizer, split_text_on_tokens
 from qdrant_client import QdrantClient
 
 from rag_doctor.consts import (
     COLLECTION_NAME,
-    EMBEDDING_MODEL,
-    PROMPT_MODEL,
     CONTENT_COLUMN,
-    SOURCE_COLUMN,
+    EMBEDDING_MODEL,
     PROMPT_MAX_TOKENS,
+    PROMPT_MODEL,
+    SOURCE_COLUMN,
 )
 
 log = logging.getLogger(__name__)
@@ -27,7 +27,9 @@ def create_rag_chain(db_client: QdrantClient) -> Callable[[str], BaseMessage]:
     def retrieve_related_documents(query: str) -> List[Document]:
         query_vector = embeddings.embed_query(query)
         results = db_client.search(
-            collection_name=COLLECTION_NAME, query_vector=query_vector, limit=3
+            collection_name=COLLECTION_NAME,
+            query_vector=query_vector,
+            limit=3,
         )
         documents = []
         for result in results:
@@ -35,12 +37,12 @@ def create_rag_chain(db_client: QdrantClient) -> Callable[[str], BaseMessage]:
                 Document(
                     page_content=result.payload[CONTENT_COLUMN],
                     metadata={SOURCE_COLUMN: result.payload[SOURCE_COLUMN]},
-                )
+                ),
             )
         return documents
 
     template = """You are a helpful AI assistant that answers questions about technical documentation.
-    Use the following documentation excerpts to answer the question. If you don't know the answer, 
+    Use the following documentation excerpts to answer the question. If you don't know the answer,
     just say you don't know. Include relevant sources in your answer and make sure they are full URLs.
 
     Documentation excerpts:
