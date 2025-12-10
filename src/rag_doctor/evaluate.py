@@ -113,9 +113,14 @@ Rating (just return the number):"""
     
     total_chars = sum(len(d.get("answer", "")) for d in data)
     estimated_tokens = total_chars // 4
-    estimated_cost = (estimated_tokens * 0.000002) + (len(data) * 0.0001)
+    
+    # Estimated cost calculation based on 2025 OpenAI GPT-4o-mini pricing:
+    # - Input tokens: $0.000150 per 1K tokens ($0.15 per 1M tokens)
+    # - Output tokens: $0.000600 per 1K tokens ($0.60 per 1M tokens)  
+    # - Per-request overhead: $0.0001 (estimated minimum charge per API call)
+    # Note: Update these values if the provider, model, or pricing changes
+    estimated_cost = (estimated_tokens * 0.000150) + (len(data) * 0.0001)
 
-    # Collect metrics for return
     metrics = {
         "response_rate": response_rate,
         "recall_at_k": recall_at_k_score,
@@ -131,7 +136,6 @@ Rating (just return the number):"""
         for metric_name, value in metrics.items():
             logger.log(f"{metric_name}_{provider}", value)
 
-    # Print organized summary
     print(f"\n=== {provider.upper()} RESULTS ===")
     print("RETRIEVAL METRICS:")
     print(f"  Recall@K: {recall_at_k_score:.2%}")
@@ -158,12 +162,10 @@ def evaluate_responses(responses_dir: str) -> None:
 
     responses_path = Path(responses_dir)
     
-    # Find all JSON files
     json_files = list(responses_path.glob("*.json"))
     
     print(f"Found {len(json_files)} response file(s) to evaluate")
 
-    # Load ground truth once
     gold_standards_file = valohai.inputs("gold_standards").path()
     gold_df = pd.read_csv(gold_standards_file)
 
