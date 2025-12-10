@@ -14,7 +14,7 @@
       - name: header_row_skip
         description: Number of initial rows to skip in the CSV files i.e. the header rows
         type: integer
-        default: 0   
+        default: 0
     inputs:
       - name: documentation_csv
         description: CSV file(s) containing the technical documentation
@@ -29,11 +29,11 @@
         description: The question(s) to ask about the documentation
         type: string
         multiple: repeat
-      - name: provider                   
+      - name: provider
         description: LLM provider to use (openai or anthropic)
         type: string
         default: openai
-        choices: [openai, anthropic]      
+        choices: [openai, anthropic]
     inputs:
       - name: embedding_db
         description: Zip archive containing the Qdrant vector database for the embeddings

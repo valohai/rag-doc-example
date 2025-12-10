@@ -10,7 +10,7 @@ authors = [
 dependencies = [
     "langchain",
     "langchain-openai",
-    "langchain-anthropic",       
+    "langchain-anthropic",
     "openai",
     "pandas",
     "python-dotenv",

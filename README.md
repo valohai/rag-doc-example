@@ -223,7 +223,7 @@ The pipeline includes gold standard questions with ground truth answers for eval
 This evaluation framework follows MLOps best practices, providing the metrics needed to maintain and improve your RAG system in production.
 
 ### Multi-Provider Comparison
-You can compare different LLM providers (OpenAI vs Anthropic) side-by-side to understand their performance characteristics and make informed decisions about which model works best for your use case, by leveraging the **Task** feature in Valohai. 
+You can compare different LLM providers (OpenAI vs Anthropic) side-by-side to understand their performance characteristics and make informed decisions about which model works best for your use case, by leveraging the **Task** feature in Valohai.
 
 1. Navigate to the "Pipelines" tab and create a new pipeline
 2. Select the "rag-evaluation-pipeline" template

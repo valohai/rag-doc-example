@@ -41,8 +41,8 @@ def create_database(
     Path(database_dir).mkdir(exist_ok=True)
     db_client = QdrantClient(path=database_dir)
 
-    create_qdrant_collection(db_client)  
-    vectorize_documents(db_client, documents)  
+    create_qdrant_collection(db_client)
+    vectorize_documents(db_client, documents)
 
     if valohai.config.is_running_in_valohai():
         package_database(database_dir)
@@ -104,14 +104,14 @@ def gather_documentation(
 def create_qdrant_collection(db_client: QdrantClient) -> None:
     log.info("Creating Qdrant collection for the embeddings...")
     collections = db_client.get_collections().collections
-    if not any(collection.name == COLLECTION_NAME for collection in collections):  
+    if not any(collection.name == COLLECTION_NAME for collection in collections):
         config = models.VectorParams(size=EMBEDDING_LENGTH, distance=models.Distance.COSINE)
         db_client.create_collection(collection_name=COLLECTION_NAME, vectors_config=config)
 
 
 def vectorize_documents(db_client: QdrantClient, documents: pd.DataFrame) -> None:
     batch_size = 100
-    
+
     embeddings = OpenAIEmbeddings(
         model=EMBEDDING_MODEL,
         chunk_size=20,

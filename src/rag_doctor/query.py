@@ -4,30 +4,32 @@ from typing import Callable, List
 import tiktoken
 from langchain.prompts import PromptTemplate
 from langchain.schema import Document
+from langchain_anthropic import ChatAnthropic
 from langchain_core.messages import BaseMessage
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from langchain_text_splitters import Tokenizer, split_text_on_tokens
 from qdrant_client import QdrantClient
-from langchain_anthropic import ChatAnthropic
 
 from rag_doctor.consts import (
+    ANTHROPIC_PROMPT_MAX_TOKENS,
+    ANTHROPIC_PROMPT_MODEL,
     COLLECTION_NAME,
     CONTENT_COLUMN,
     EMBEDDING_MODEL,
     PROMPT_MAX_TOKENS,
     PROMPT_MODEL,
+    PROVIDER,
     SOURCE_COLUMN,
-    ANTHROPIC_PROMPT_MODEL,
-    ANTHROPIC_PROMPT_MAX_TOKENS,
-    PROVIDER
 )
 
 log = logging.getLogger(__name__)
 
 
-def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Callable[[str], BaseMessage]:
+def create_rag_chain(
+    db_client: QdrantClient, provider: str = PROVIDER
+) -> Callable[[str], BaseMessage]:
     embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
-    
+
     if provider == "anthropic":
         prompt_model = ChatAnthropic(model=ANTHROPIC_PROMPT_MODEL, temperature=0)
         max_tokens = ANTHROPIC_PROMPT_MAX_TOKENS
@@ -71,10 +73,12 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
     prompt_chain = prompt | prompt_model
 
     if provider == "anthropic":
+
         def count_tokens(text: str) -> int:
-            return len(text) // 4  
+            return len(text) // 4
     else:
         token_encoder = tiktoken.encoding_for_model(model_name=model_name)
+
         def count_tokens(text: str) -> int:
             return len(token_encoder.encode(text))
 
@@ -102,10 +106,9 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
         log.debug(f"tokens after separator: {remaining_tokens}")
 
         documentation = "\n\n".join(doc.page_content for doc in documents)
-        
+
         if provider == "anthropic":
-            
-            max_chars = remaining_tokens * 4  
+            max_chars = remaining_tokens * 4
             if len(documentation) > max_chars:
                 truncated_content = documentation[:max_chars]
             else:

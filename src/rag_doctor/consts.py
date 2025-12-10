@@ -8,7 +8,7 @@ COLLECTION_NAME = "docs"
 CONTENT_COLUMN = "content"
 SOURCE_COLUMN = "source"
 
-PROVIDER = "openai"  
+PROVIDER = "openai"
 
 ANTHROPIC_PROMPT_MODEL = "claude-haiku-4-5"
 ANTHROPIC_PROMPT_MAX_TOKENS = 200_000

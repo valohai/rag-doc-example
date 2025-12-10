@@ -1,9 +1,9 @@
 import json
 import logging
-import numpy as np
 from pathlib import Path
-import pandas as pd
 
+import numpy as np
+import pandas as pd
 import valohai
 from langchain_openai import ChatOpenAI
 
@@ -12,13 +12,15 @@ from rag_doctor.consts import PROMPT_MODEL
 log = logging.getLogger(__name__)
 
 
-def evaluate_retrieval_quality(retrieved_contents: list, ground_truth: str, question: str, prompt_model) -> float:
+def evaluate_retrieval_quality(
+    retrieved_contents: list, ground_truth: str, question: str, prompt_model
+) -> float:
     """Use LLM to judge if retrieved docs support the ground truth answer."""
     if not retrieved_contents:
         return 0.0
-    
+
     context = "\n\n---\n\n".join(retrieved_contents[:3])[:3000]
-    
+
     prompt = f"""You are evaluating a RAG system's retrieval quality.
 
 Question: {question}
@@ -47,27 +49,30 @@ Return only a decimal number:"""
 
 def evaluate_provider(data: list, provider: str, gold_lookup: dict, prompt_model) -> dict:
     """Evaluate responses from a single provider."""
-    
+
     print(f"\n=== EVALUATING {provider.upper()} PROVIDER ===")
     print(f"Processing {len(data)} responses...")
 
     # 1. RETRIEVAL METRICS (LLM-as-judge)
     recall_scores = []
-    
+
     for d in data:
         question_lower = d["question"].strip().lower()
         gold = gold_lookup.get(question_lower)
-        
+
         if not gold:
             log.warning(f"No ground truth for question: {d['question']}")
             continue
-        
+
         retrieved_contents = d.get("retrieved_contents", [])
         ground_truth = gold["answer"]
-        
+
         if retrieved_contents:
             recall = evaluate_retrieval_quality(
-                retrieved_contents, ground_truth, d["question"], prompt_model
+                retrieved_contents,
+                ground_truth,
+                d["question"],
+                prompt_model,
             )
             recall_scores.append(recall)
             print(f"Question: {d['question'][:50]}... -> Recall: {recall:.2%}")
@@ -80,11 +85,11 @@ def evaluate_provider(data: list, provider: str, gold_lookup: dict, prompt_model
     # 2. GENERATION METRICS - Factuality via LLM-as-a-judge
     factuality_scores = []
     substantive = [r for r in valid_responses if len(r.get("answer", "")) > 100]
-    
+
     for response in substantive:
         factuality_prompt = f"""Rate the factual accuracy of this answer on a scale of 1-5 where:
 1 = Completely inaccurate
-2 = Mostly inaccurate  
+2 = Mostly inaccurate
 3 = Somewhat accurate
 4 = Mostly accurate
 5 = Completely accurate
@@ -104,13 +109,13 @@ Rating (just return the number):"""
     factuality_score = np.mean(factuality_scores) if factuality_scores else 0.0
 
     avg_length = np.mean([len(d.get("answer", "")) for d in data]) if data else 0
-    
+
     substantive_responses = len(substantive)
     substantive_rate = substantive_responses / len(data) if data else 0
 
     # 3. OPERATIONAL METRICS
-    estimated_latency = 1.2 + (avg_length * 0.001)  
-    
+    estimated_latency = 1.2 + (avg_length * 0.001)
+
     total_chars = sum(len(d.get("answer", "")) for d in data)
     estimated_tokens = total_chars // 4
     estimated_cost = (estimated_tokens * 0.000002) + (len(data) * 0.0001)
@@ -124,7 +129,7 @@ Rating (just return the number):"""
         "substantive_rate": substantive_rate,
         "total_questions": len(data),
         "estimated_latency_seconds": round(estimated_latency, 3),
-        "estimated_cost_usd": round(estimated_cost, 4)
+        "estimated_cost_usd": round(estimated_cost, 4),
     }
 
     with valohai.logger() as logger:
@@ -157,10 +162,10 @@ def evaluate_responses(responses_dir: str) -> None:
     log.info("Loading response data for evaluation...")
 
     responses_path = Path(responses_dir)
-    
+
     # Find all JSON files
     json_files = list(responses_path.glob("*.json"))
-    
+
     print(f"Found {len(json_files)} response file(s) to evaluate")
 
     # Load ground truth once
@@ -169,27 +174,27 @@ def evaluate_responses(responses_dir: str) -> None:
 
     gold_lookup = {}
     for _, row in gold_df.iterrows():
-        question = row['question'].strip().lower()
+        question = row["question"].strip().lower()
         gold_lookup[question] = {
-            "answer": row['ground_truth_answer'],
-            "source": row.get('source', ''),
+            "answer": row["ground_truth_answer"],
+            "source": row.get("source", ""),
         }
 
     # LLM judge
     prompt_model = ChatOpenAI(model=PROMPT_MODEL, temperature=0)
 
     all_metrics = {}
-    
+
     for json_file in json_files:
         with open(json_file) as f:
             data = json.load(f)
-        
+
         if not data:
             print(f"Skipping empty file: {json_file.name}")
             continue
-        
-        provider = data[0].get("provider", json_file.stem) 
-        
+
+        provider = data[0].get("provider", json_file.stem)
+
         metrics = evaluate_provider(data, provider, gold_lookup, prompt_model)
         all_metrics[provider] = metrics
 
