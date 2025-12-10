@@ -1,6 +1,6 @@
 - step:
     name: create-embeddings
-    image: ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+    image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
     command: uv run rag-doctor create-database {parameters}
     parameters:
       - name: content_column_index
@@ -22,7 +22,7 @@
 
 - step:
     name: do-query
-    image: ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+    image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
     command: uv run rag-doctor query {parameters}
     parameters:
       - name: question
@@ -35,7 +35,7 @@
 
 - endpoint:
     name: ask
-    image: ghcr.io/astral-sh/uv:python3.11-bookworm-slim
+    image: ghcr.io/astral-sh/uv:python3.13-bookworm-slim
     port: 8000
     server-command: uv run --group server rag-doctor serve --host 0.0.0.0 --database_dir ./qdrant_data
     files:

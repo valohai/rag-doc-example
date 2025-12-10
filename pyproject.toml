@@ -2,7 +2,7 @@
 name = "rag-doctor"
 version = "0.1.0"
 description = "Showcase RAG inference for technical documentation using Qdrant and OpenAI"
-requires-python = ">=3.11"
+requires-python = ">=3.13"
 license = "MIT"
 authors = [
     { name = "Valohai", email = "hait@valohai.com" },
