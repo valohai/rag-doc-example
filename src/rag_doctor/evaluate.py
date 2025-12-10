@@ -13,7 +13,10 @@ log = logging.getLogger(__name__)
 
 
 def evaluate_retrieval_quality(
-    retrieved_contents: list, ground_truth: str, question: str, prompt_model
+    retrieved_contents: list,
+    ground_truth: str,
+    question: str,
+    prompt_model,
 ) -> float:
     """Use LLM to judge if retrieved docs support the ground truth answer."""
     if not retrieved_contents:

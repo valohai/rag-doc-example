@@ -26,7 +26,8 @@ log = logging.getLogger(__name__)
 
 
 def create_rag_chain(
-    db_client: QdrantClient, provider: str = PROVIDER
+    db_client: QdrantClient,
+    provider: str = PROVIDER,
 ) -> Callable[[str], BaseMessage]:
     embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
 

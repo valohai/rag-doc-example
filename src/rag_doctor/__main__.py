@@ -104,7 +104,7 @@ def cli_query(sys_argv: list[str]) -> None:
                 "answer": message.content,
                 "provider": args.provider,
                 "retrieved_contents": retrieved_contents,
-            }
+            },
         )
 
     # After the loop ends, save the data:
