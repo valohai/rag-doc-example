@@ -18,7 +18,7 @@ def create_app(db_client: QdrantClient, provider: str = PROVIDER) -> FastAPI:
 
     @app.post("/{full_path:path}", response_model=ResponsePayload)
     async def solo_handler(full_path: str, question: Annotated[str, Form()]) -> ResponsePayload:
-        message, _ = rag_chain(question)
+        message = rag_chain(question)
 
         if not message or not message.content:
             raise HTTPException(status_code=500, detail="No response from the model")
