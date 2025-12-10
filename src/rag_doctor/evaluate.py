@@ -109,10 +109,6 @@ Rating (just return the number):"""
     substantive_rate = substantive_responses / len(data) if data else 0
 
     # 3. OPERATIONAL METRICS
-    # Latency estimation formula:
-    # - 1.2 seconds base latency: Empirically observed average response time for the model/system.
-    # - 0.001 seconds per character: Estimated additional latency per character in the response, based on typical model throughput.
-    # Adjust these values if benchmarking shows different performance characteristics.
     estimated_latency = 1.2 + (avg_length * 0.001)  
     
     total_chars = sum(len(d.get("answer", "")) for d in data)
