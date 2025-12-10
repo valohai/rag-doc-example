@@ -136,6 +136,7 @@ def cli_serve(sys_argv: list[str]) -> None:
     # fmt: on
 
     import uvicorn
+
     from rag_doctor.server import create_app
 
     db_client = prepare_database(args.database_dir)

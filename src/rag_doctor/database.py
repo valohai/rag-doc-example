@@ -13,11 +13,11 @@ from qdrant_client import QdrantClient
 from qdrant_client.http import models
 
 from rag_doctor.consts import (
-    EMBEDDING_MODEL,
-    EMBEDDING_LENGTH,
-    CONTENT_COLUMN,
-    SOURCE_COLUMN,
     COLLECTION_NAME,
+    CONTENT_COLUMN,
+    EMBEDDING_LENGTH,
+    EMBEDDING_MODEL,
+    SOURCE_COLUMN,
 )
 
 log = logging.getLogger(__name__)
@@ -144,7 +144,7 @@ def vectorize_documents(db_client: QdrantClient, documents: pd.DataFrame) -> Non
                         CONTENT_COLUMN: row[CONTENT_COLUMN],
                         SOURCE_COLUMN: row[SOURCE_COLUMN],
                     },
-                )
+                ),
             )
 
         db_client.upsert(collection_name=COLLECTION_NAME, points=points)

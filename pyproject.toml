@@ -35,6 +35,9 @@ link-mode = "copy"
 [tool.ruff]
 line-length = 100
 
+[tool.ruff.lint]
+extend-select = ["I", "COM812"]
+
 [dependency-groups]
 lint = [
     "ruff",

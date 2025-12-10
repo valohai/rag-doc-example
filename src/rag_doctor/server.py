@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import FastAPI, HTTPException, Form
+from fastapi import FastAPI, Form, HTTPException
 from pydantic import BaseModel
 from qdrant_client import QdrantClient
 
