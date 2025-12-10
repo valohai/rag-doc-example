@@ -69,8 +69,6 @@ def create_rag_chain(db_client: QdrantClient, provider: str = PROVIDER) -> Calla
     prompt_chain = prompt | prompt_model
 
     if provider == "anthropic":
-        # Rough token count estimate for Anthropic models: 4 characters ≈ 1 token.
-        # This is a heuristic and may not be accurate for all text types.
         def count_tokens(text: str) -> int:
             return len(text) // 4  
     else:
