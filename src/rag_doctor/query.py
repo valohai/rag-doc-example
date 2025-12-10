@@ -28,7 +28,7 @@ log = logging.getLogger(__name__)
 def create_rag_chain(
     db_client: QdrantClient,
     provider: str = PROVIDER,
-) -> Callable[[str], BaseMessage]:
+) -> Callable[[str], tuple[BaseMessage, list[str]]]:
     embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
 
     if provider == "anthropic":
@@ -40,7 +40,7 @@ def create_rag_chain(
         max_tokens = PROMPT_MAX_TOKENS
         model_name = PROMPT_MODEL
 
-    def retrieve_related_documents(query: str) -> List[Document]:
+    def retrieve_related_documents(query: str) -> tuple[list[Document], list[str]]:
         query_vector = embeddings.embed_query(query)
         results = db_client.search(
             collection_name=COLLECTION_NAME,
@@ -85,7 +85,7 @@ def create_rag_chain(
 
     template_token_count = count_tokens(template.format(context="", question=""))
 
-    def rag_chain(question: str) -> tuple[BaseMessage, List[int]]:
+    def rag_chain(question: str) -> tuple[BaseMessage, List[str]]:
         documents, retrieved_contents = retrieve_related_documents(question)
 
         remaining_tokens = max_tokens

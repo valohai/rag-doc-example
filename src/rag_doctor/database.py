@@ -114,6 +114,7 @@ def vectorize_documents(db_client: QdrantClient, documents: pd.DataFrame) -> Non
 
     embeddings = OpenAIEmbeddings(
         model=EMBEDDING_MODEL,
+        chunk_size=100,
     )
     batch_count = (len(documents) // batch_size) + 1
 
