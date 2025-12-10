@@ -50,6 +50,33 @@ Return only a decimal number:"""
         return 0.0
 
 
+def evaluate_factuality(
+    question: str,
+    answer: str,
+    prompt_model,
+) -> float:
+    """Use LLM to judge the factual accuracy of an answer on a scale of 1-5."""
+    prompt = f"""Rate the factual accuracy of this answer on a scale of 1-5 where:
+1 = Completely inaccurate
+2 = Mostly inaccurate
+3 = Somewhat accurate
+4 = Mostly accurate
+5 = Completely accurate
+
+Question: {question}
+Answer: {answer}
+
+Rating (just return the number):"""
+
+    try:
+        message = prompt_model.invoke(prompt)
+        score = float(message.content.strip())
+        return min(5.0, max(1.0, score))
+    except Exception as e:
+        log.warning(f"Failed to get factuality score: {e}")
+        return 0.0
+
+
 def evaluate_provider(data: list, provider: str, gold_lookup: dict, prompt_model) -> dict:
     """Evaluate responses from a single provider."""
 
@@ -90,24 +117,13 @@ def evaluate_provider(data: list, provider: str, gold_lookup: dict, prompt_model
     substantive = [r for r in valid_responses if len(r.get("answer", "")) > 100]
 
     for response in substantive:
-        factuality_prompt = f"""Rate the factual accuracy of this answer on a scale of 1-5 where:
-1 = Completely inaccurate
-2 = Mostly inaccurate
-3 = Somewhat accurate
-4 = Mostly accurate
-5 = Completely accurate
-
-Question: {response["question"]}
-Answer: {response["answer"]}
-
-Rating (just return the number):"""
-
-        try:
-            message = prompt_model.invoke(factuality_prompt)
-            score = float(message.content.strip())
+        score = evaluate_factuality(
+            response["question"],
+            response["answer"],
+            prompt_model,
+        )
+        if score > 0:
             factuality_scores.append(score)
-        except (ValueError, Exception) as e:
-            log.warning(f"Failed to get factuality score: {e}")
 
     factuality_score = np.mean(factuality_scores) if factuality_scores else 0.0
 
