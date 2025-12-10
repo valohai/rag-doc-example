@@ -1,5 +1,5 @@
 import logging
-from typing import Callable, List
+from collections.abc import Callable
 
 import tiktoken
 from langchain.prompts import PromptTemplate
@@ -24,7 +24,7 @@ log = logging.getLogger(__name__)
 def create_rag_chain(db_client: QdrantClient) -> Callable[[str], BaseMessage]:
     embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
 
-    def retrieve_related_documents(query: str) -> List[Document]:
+    def retrieve_related_documents(query: str) -> list[Document]:
         query_vector = embeddings.embed_query(query)
         results = db_client.search(
             collection_name=COLLECTION_NAME,
@@ -102,7 +102,6 @@ def create_rag_chain(db_client: QdrantClient) -> Callable[[str], BaseMessage]:
         log.debug(f"tokens after docs:      {remaining_tokens}")
 
         context = f"{truncated_content}{separator}{sources_bullet_points}"
-        message = prompt_chain.invoke(input={"context": context, "question": question})
-        return message
+        return prompt_chain.invoke(input={"context": context, "question": question})
 
     return rag_chain

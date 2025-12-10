@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import zipfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -61,7 +61,9 @@ def prepare_database(database_dir: Path | str) -> QdrantClient:
         try:
             first_zip = next(database_dir_path.glob("*.zip"))
         except StopIteration:
-            raise ValueError(f"Directory {database_dir_path} does not contain a Qdrant database")
+            raise ValueError(
+                f"Directory {database_dir_path} does not contain a Qdrant database",
+            ) from None
         with zipfile.ZipFile(first_zip) as zip_file:
             zip_file.extractall(database_dir_path)
 
@@ -154,7 +156,7 @@ def package_database(database_dir: Path | str):
     if not database_dir_path.is_dir():
         raise ValueError(f"Qdrant database directory {database_dir_path} does not exist.")
 
-    timestamp = datetime.now().astimezone(timezone.utc).strftime("%Y%m%d-%H%M%S")
+    timestamp = datetime.now().astimezone(UTC).strftime("%Y%m%d-%H%M%S")
     zip_path = Path(valohai.outputs().path(f"doc-embeddings-{timestamp}.zip"))
     zip_path.parent.mkdir(parents=True, exist_ok=True)
 

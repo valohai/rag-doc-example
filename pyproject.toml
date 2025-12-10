@@ -35,7 +35,15 @@ link-mode = "copy"
 line-length = 100
 
 [tool.ruff.lint]
-extend-select = ["I", "COM812"]
+extend-select = [
+    "B",
+    "COM812",
+    "E",
+    "I",
+    "RET",
+    "UP",
+]
+ignore = ["E501"]
 
 [dependency-groups]
 lint = [
