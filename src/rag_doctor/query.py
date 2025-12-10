@@ -40,7 +40,7 @@ def create_rag_chain(db_client: QdrantClient) -> Callable[[str], BaseMessage]:
         return documents
 
     template = """You are a helpful AI assistant that answers questions about technical documentation.
-    Use the following documentation excerpts to answer the question. If you don't know the answer, 
+    Use the following documentation excerpts to answer the question. If you don't know the answer,
     just say you don't know. Include relevant sources in your answer and make sure they are full URLs.
 
     Documentation excerpts:
