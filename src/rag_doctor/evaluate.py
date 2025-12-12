@@ -1,8 +1,9 @@
 import json
 import logging
 from pathlib import Path
+from statistics import mean
+from typing import TypedDict
 
-import numpy as np
 import pandas as pd
 import valohai
 from langchain_openai import ChatOpenAI
@@ -10,6 +11,18 @@ from langchain_openai import ChatOpenAI
 from rag_doctor.consts import PROMPT_MODEL
 
 log = logging.getLogger(__name__)
+
+
+class ResponseData(TypedDict):
+    question: str
+    answer: str
+    provider: str
+    retrieved_contents: list[str]
+
+
+class GoldStandard(TypedDict):
+    answer: str
+    source: str
 
 
 def evaluate_retrieval_quality(
@@ -77,7 +90,12 @@ Rating (just return the number):"""
         return 0.0
 
 
-def evaluate_provider(data: list, provider: str, gold_lookup: dict, prompt_model) -> dict:
+def evaluate_provider(
+    data: list[ResponseData],
+    provider: str,
+    gold_lookup: dict[str, GoldStandard],
+    prompt_model,
+) -> dict[str, float]:
     """Evaluate responses from a single provider."""
 
     print(f"\n=== EVALUATING {provider.upper()} PROVIDER ===")
@@ -107,7 +125,7 @@ def evaluate_provider(data: list, provider: str, gold_lookup: dict, prompt_model
             recall_scores.append(recall)
             print(f"Question: {d['question'][:50]}... -> Recall: {recall:.2%}")
 
-    recall_at_k_score = np.mean(recall_scores) if recall_scores else 0.0
+    recall_at_k_score = mean(recall_scores) if recall_scores else 0.0
 
     valid_responses = [d for d in data if d.get("answer", "").strip()]
     response_rate = len(valid_responses) / len(data) if data else 0
@@ -125,9 +143,9 @@ def evaluate_provider(data: list, provider: str, gold_lookup: dict, prompt_model
         if score > 0:
             factuality_scores.append(score)
 
-    factuality_score = np.mean(factuality_scores) if factuality_scores else 0.0
+    factuality_score = mean(factuality_scores) if factuality_scores else 0.0
 
-    avg_length = np.mean([len(d.get("answer", "")) for d in data]) if data else 0
+    avg_length = mean([len(d.get("answer", "")) for d in data]) if data else 0
 
     substantive_responses = len(substantive)
     substantive_rate = substantive_responses / len(data) if data else 0
@@ -191,7 +209,7 @@ def evaluate_responses(responses_dir: str) -> None:
     gold_standards_file = valohai.inputs("gold_standards").path()
     gold_df = pd.read_csv(gold_standards_file)
 
-    gold_lookup = {}
+    gold_lookup: dict[str, GoldStandard] = {}
     for _, row in gold_df.iterrows():
         question = row["question"].strip().lower()
         gold_lookup[question] = {
