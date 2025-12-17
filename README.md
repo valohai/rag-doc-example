@@ -152,6 +152,88 @@ Similarly, modifying the embedding model is a matter of reimplementing the embed
 
 </details>
 
+### RAG Evaluation Pipeline
+
+This repository includes a comprehensive evaluation system that measures RAG performance across three key dimensions: retrieval quality, generation accuracy, and operational efficiency.
+
+<details>
+<summary>🤩 Show Me!</summary>
+
+#### What Gets Evaluated
+
+**Retrieval Metrics:**
+- **Context Coverage**: Uses LLM-as-a-judge to assess whether retrieved documents contain the information needed to answer the question correctly
+- **Response Rate**: Percentage of questions that receive valid responses
+
+**Generation Metrics:**
+- **Factuality Score**: LLM-based evaluation of answer accuracy (1-5 scale)
+- **Response Quality**: Average length and substantive response rate
+
+**Operational Metrics:**
+- **Latency**: Estimated response time per query
+- **Cost**: Token-based cost estimation for embeddings and LLM calls
+
+#### How to Run Evaluation
+**⚠️ Important:** Make sure you have the appropriate API keys configured in your project environment variables:
+- For OpenAI models: `OPENAI_API_KEY` (already set up from the initial setup)
+- For Anthropic models: Add `ANTHROPIC_API_KEY` if using `provider: anthropic`
+- For other providers: Add the corresponding API key as needed
+
+1. Navigate to the "Pipelines" tab and create a new pipeline
+2. Select the "rag-evaluation-pipeline" template
+3. Select which model provider you would like to evaluate (default: OpenAI) and the questions to test the knowledge base on.
+   ![](.github/rag-pipeline-parameters.png)
+4. The pipeline will:
+   - Create embeddings from your documentation
+   - Generate responses to evaluation questions
+   - Run comprehensive evaluation metrics (for other evaluation metrics, you can customize `evaluate.py` accordingly)
+   ![](.github/rag-evaluation-pipeline.png)
+
+
+#### Evaluation Results
+
+The evaluation step produces detailed metrics logged to Valohai's metadata system:
+```json
+{
+  "response_rate": 1.0,
+  "context_coverage": 0.85,
+  "factuality_score": 4.2,
+  "avg_response_length": 841.25,
+  "substantive_rate": 0.9,
+  "estimated_latency_seconds": 2.041,
+  "estimated_cost_usd": 0.0021
+}
+```
+![](.github/rag-evaluate-result.png)
+
+These metrics help you:
+- **Monitor system performance** over time
+- **Compare different models or configurations**
+- **Validate changes** before deploying to production
+- **Understand cost implications** of your RAG system
+
+#### Using Custom Evaluation Questions
+
+The pipeline includes gold standard questions with ground truth answers for evaluation. You can customize these by:
+
+1. Creating your own evaluation dataset with columns: `question`, `ground_truth_answer`
+2. Updating the `gold_standards` input in the `evaluate-rag` step in `valohai.yaml`
+3. Modifying the questions in the pipeline configuration
+
+This evaluation framework follows MLOps best practices, providing the metrics needed to maintain and improve your RAG system in production.
+
+### Multi-Provider Comparison
+You can compare different LLM providers (OpenAI vs Anthropic) side-by-side to understand their performance characteristics and make informed decisions about which model works best for your use case, by leveraging the **Task** feature in Valohai.
+
+1. Navigate to the "Pipelines" tab and create a new pipeline
+2. Select the "rag-evaluation-pipeline" template
+3. Select the `generate-responses` node and convert it to a Task.
+   ![](.github/rag-evaluate-task.png)
+
+This will automatically create executions for the model providers available in the `provider` parameter.
+
+</details>
+
 ### Using Your Own Documentation
 
 You can take a look at the input file given to the "embedding" node and create a similar CSV from

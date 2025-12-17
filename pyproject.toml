@@ -10,10 +10,12 @@ authors = [
 dependencies = [
     "langchain",
     "langchain-openai",
+    "langchain-anthropic",
     "openai",
     "pandas",
     "python-dotenv",
     "qdrant-client",
+    "tenacity",
     "tiktoken",
     "valohai-utils",
 ]
