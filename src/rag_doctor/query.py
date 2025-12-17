@@ -1,5 +1,6 @@
 import logging
-from typing import Callable, List, Tuple
+from dataclasses import dataclass
+from typing import Callable, List
 
 import tiktoken
 from langchain.prompts import PromptTemplate
@@ -19,22 +20,31 @@ from rag_doctor.consts import (
     EMBEDDING_MODEL,
     PROMPT_MAX_TOKENS,
     PROMPT_MODEL,
-    PROVIDER,
     SOURCE_COLUMN,
 )
 
 log = logging.getLogger(__name__)
 
 
+@dataclass
+class ProviderConfig:
+    model: BaseChatModel
+    max_tokens: int
+    count_tokens: Callable[[str], int]
+    truncate: Callable[[str, int], str]
+
+
 def get_provider_config(
     provider: str,
-) -> Tuple[BaseChatModel, int, Callable[[str], int], Callable[[str, int], str]]:
+) -> ProviderConfig:
     """Return (model, max_tokens, count_tokens_fn, truncate_fn) for the given provider."""
 
     if provider == "anthropic":
         model = ChatAnthropic(model=ANTHROPIC_PROMPT_MODEL, temperature=0)
         max_tokens = ANTHROPIC_PROMPT_MAX_TOKENS
 
+        # Rough token count estimate for Anthropic models: 4 characters ≈ 1 token.
+        # This is a heuristic and may not be accurate for all text types.
         def count_tokens(text: str) -> int:
             return len(text) // 4
 
@@ -42,7 +52,7 @@ def get_provider_config(
             max_chars = limit * 4
             return text[:max_chars] if len(text) > max_chars else text
 
-    else:
+    elif provider == "openai":
         model = ChatOpenAI(model=PROMPT_MODEL, temperature=0)
         max_tokens = PROMPT_MAX_TOKENS
         encoder = tiktoken.encoding_for_model(model_name=PROMPT_MODEL)
@@ -57,21 +67,19 @@ def get_provider_config(
                 encode=lambda t: encoder.encode(t),
                 tokens_per_chunk=limit,
             )
-            try:
-                return split_text_on_tokens(text=text, tokenizer=tokenizer)[0]
-            except IndexError:
-                log.exception("Failed to truncate content, skip augmentation:")
-                return ""
+            return split_text_on_tokens(text=text, tokenizer=tokenizer)[0]
+    else:
+        raise ValueError(f"Unknown provider: {provider}")
 
-    return model, max_tokens, count_tokens, truncate
+    return ProviderConfig(model, max_tokens, count_tokens, truncate)
 
 
 def create_rag_chain(
     db_client: QdrantClient,
-    provider: str = PROVIDER,
+    provider: str,
 ) -> Callable[[str], tuple[BaseMessage, list[str]]]:
     embeddings = OpenAIEmbeddings(model=EMBEDDING_MODEL)
-    prompt_model, max_tokens, count_tokens, truncate = get_provider_config(provider)
+    config = get_provider_config(provider)
 
     def retrieve_related_documents(query: str) -> tuple[list[Document], list[str]]:
         query_vector = embeddings.embed_query(query)
@@ -104,14 +112,14 @@ def create_rag_chain(
     Answer: """
 
     prompt = PromptTemplate(template=template, input_variables=["context", "question"])
-    prompt_chain = prompt | prompt_model
+    prompt_chain = prompt | config.model
 
-    template_token_count = count_tokens(template.format(context="", question=""))
+    template_token_count = config.count_tokens(template.format(context="", question=""))
 
     def rag_chain(question: str) -> tuple[BaseMessage, List[str]]:
         documents, retrieved_contents = retrieve_related_documents(question)
 
-        remaining_tokens = max_tokens
+        remaining_tokens = config.max_tokens
         log.debug(f"tokens at the start:    {remaining_tokens}")
 
         remaining_tokens -= template_token_count
@@ -119,20 +127,19 @@ def create_rag_chain(
 
         sources: list[str] = [doc.metadata[SOURCE_COLUMN] for doc in documents]
         sources_bullet_points = "\n".join([f"- Source: {source}" for source in sources])
-        remaining_tokens -= count_tokens(sources_bullet_points)
+        remaining_tokens -= config.count_tokens(sources_bullet_points)
         log.debug(f"tokens after sources:   {remaining_tokens}")
 
-        remaining_tokens -= count_tokens(question)
+        remaining_tokens -= config.count_tokens(question)
         log.debug(f"tokens after question:  {remaining_tokens}")
 
         separator = "\n\n"
-        remaining_tokens -= count_tokens(separator)
+        remaining_tokens -= config.count_tokens(separator)
         log.debug(f"tokens after separator: {remaining_tokens}")
 
         documentation = "\n\n".join(doc.page_content for doc in documents)
-        truncated_content = truncate(documentation, remaining_tokens)
-
-        remaining_tokens -= count_tokens(truncated_content)
+        truncated_content = config.truncate(documentation, remaining_tokens)
+        remaining_tokens -= config.count_tokens(truncated_content)
         log.debug(f"tokens after docs:      {remaining_tokens}")
 
         context = f"{truncated_content}{separator}{sources_bullet_points}"

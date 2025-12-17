@@ -1,16 +1,20 @@
+import csv
 import json
 import logging
 from pathlib import Path
 from statistics import mean
 from typing import TypedDict
 
-import pandas as pd
 import valohai
 from langchain_openai import ChatOpenAI
+from tenacity import retry, stop_after_attempt, wait_fixed
 
 from rag_doctor.consts import PROMPT_MODEL
 
 log = logging.getLogger(__name__)
+
+RETRIEVAL_K = 3  # Number of top retrieved chunks to evaluate for context coverage
+CONTEXT_CHAR_LIMIT = 3000  # Max characters for LLM judge context to manage token costs
 
 
 class ResponseData(TypedDict):
@@ -25,6 +29,7 @@ class GoldStandard(TypedDict):
     source: str
 
 
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
 def evaluate_retrieval_quality(
     retrieved_contents: list,
     ground_truth: str,
@@ -33,9 +38,9 @@ def evaluate_retrieval_quality(
 ) -> float:
     """Use LLM to judge if retrieved docs support the ground truth answer."""
     if not retrieved_contents:
-        return 0.0
+        raise ValueError("retrieved_contents cannot be empty")
 
-    context = "\n\n---\n\n".join(retrieved_contents[:3])[:3000]
+    context = "\n\n---\n\n".join(retrieved_contents[:RETRIEVAL_K])[:CONTEXT_CHAR_LIMIT]
 
     prompt = f"""You are evaluating a RAG system's retrieval quality.
 
@@ -54,15 +59,12 @@ Score from 0.0 to 1.0: What fraction of the information needed to produce the gr
 
 Return only a decimal number:"""
 
-    try:
-        response = prompt_model.invoke(prompt)
-        score = float(response.content.strip())
-        return min(1.0, max(0.0, score))
-    except Exception as e:
-        log.warning(f"Failed to evaluate retrieval: {e}")
-        return 0.0
+    response = prompt_model.invoke(prompt)
+    score = float(response.content.strip())
+    return min(1.0, max(0.0, score))
 
 
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(1))
 def evaluate_factuality(
     question: str,
     answer: str,
@@ -81,13 +83,9 @@ Answer: {answer}
 
 Rating (just return the number):"""
 
-    try:
-        message = prompt_model.invoke(prompt)
-        score = float(message.content.strip())
-        return min(5.0, max(1.0, score))
-    except Exception as e:
-        log.warning(f"Failed to get factuality score: {e}")
-        return 0.0
+    message = prompt_model.invoke(prompt)
+    score = float(message.content.strip())
+    return min(5.0, max(1.0, score))
 
 
 def evaluate_provider(
@@ -102,7 +100,7 @@ def evaluate_provider(
     print(f"Processing {len(data)} responses...")
 
     # 1. RETRIEVAL METRICS (LLM-as-judge)
-    recall_scores = []
+    coverage_scores = []
 
     for d in data:
         question_lower = d["question"].strip().lower()
@@ -116,16 +114,16 @@ def evaluate_provider(
         ground_truth = gold["answer"]
 
         if retrieved_contents:
-            recall = evaluate_retrieval_quality(
+            coverage = evaluate_retrieval_quality(
                 retrieved_contents,
                 ground_truth,
                 d["question"],
                 prompt_model,
             )
-            recall_scores.append(recall)
-            print(f"Question: {d['question'][:50]}... -> Recall: {recall:.2%}")
+            coverage_scores.append(coverage)
+            print(f"Question: {d['question'][:50]}... -> Context coverage: {coverage:.2%}")
 
-    recall_at_k_score = mean(recall_scores) if recall_scores else 0.0
+    context_coverage_score = mean(coverage_scores) if coverage_scores else 0.0
 
     valid_responses = [d for d in data if d.get("answer", "").strip()]
     response_rate = len(valid_responses) / len(data) if data else 0
@@ -160,7 +158,7 @@ def evaluate_provider(
     # Collect metrics for return
     metrics = {
         "response_rate": response_rate,
-        "recall_at_k": recall_at_k_score,
+        "context_coverage": context_coverage_score,
         "factuality_score": factuality_score,
         "avg_response_length": avg_length,
         "substantive_rate": substantive_rate,
@@ -176,7 +174,7 @@ def evaluate_provider(
     # Print organized summary
     print(f"\n=== {provider.upper()} RESULTS ===")
     print("RETRIEVAL METRICS:")
-    print(f"  Recall@K: {recall_at_k_score:.2%}")
+    print(f"  Context coverage: {context_coverage_score:.2%}")
     print(f"  Response rate: {response_rate:.2%}")
     print()
     print("GENERATION METRICS:")
@@ -207,15 +205,14 @@ def evaluate_responses(responses_dir: str) -> None:
 
     # Load ground truth once
     gold_standards_file = valohai.inputs("gold_standards").path()
-    gold_df = pd.read_csv(gold_standards_file)
-
     gold_lookup: dict[str, GoldStandard] = {}
-    for _, row in gold_df.iterrows():
-        question = row["question"].strip().lower()
-        gold_lookup[question] = {
-            "answer": row["ground_truth_answer"],
-            "source": row.get("source", ""),
-        }
+    with open(gold_standards_file) as f:
+        for row in csv.DictReader(f):
+            question = row["question"].strip().lower()
+            gold_lookup[question] = {
+                "answer": row["ground_truth_answer"],
+                "source": row.get("source", ""),
+            }
 
     # LLM judge
     prompt_model = ChatOpenAI(model=PROMPT_MODEL, temperature=0)

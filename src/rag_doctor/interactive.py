@@ -17,7 +17,7 @@ def start_chat(*, db_client: QdrantClient, provider: str = PROVIDER) -> None:
             break
         if query:
             try:
-                message = rag_chain(query)
+                message, _ = rag_chain(query)
                 print("\n🥼 Doctor:")
                 print(message.content)
             except Exception as e:

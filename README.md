@@ -162,7 +162,7 @@ This repository includes a comprehensive evaluation system that measures RAG per
 #### What Gets Evaluated
 
 **Retrieval Metrics:**
-- **Recall@K**: Uses LLM-as-a-judge to assess whether retrieved documents contain the information needed to answer the question correctly
+- **Context Coverage**: Uses LLM-as-a-judge to assess whether retrieved documents contain the information needed to answer the question correctly
 - **Response Rate**: Percentage of questions that receive valid responses
 
 **Generation Metrics:**
@@ -196,7 +196,7 @@ The evaluation step produces detailed metrics logged to Valohai's metadata syste
 ```json
 {
   "response_rate": 1.0,
-  "recall_at_k": 0.85,
+  "context_coverage": 0.85,
   "factuality_score": 4.2,
   "avg_response_length": 841.25,
   "substantive_rate": 0.9,

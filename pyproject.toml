@@ -15,6 +15,7 @@ dependencies = [
     "pandas",
     "python-dotenv",
     "qdrant-client",
+    "tenacity",
     "tiktoken",
     "valohai-utils",
 ]
