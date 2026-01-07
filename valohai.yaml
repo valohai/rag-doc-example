@@ -47,7 +47,7 @@
         description: JSON file(s) containing generated responses to evaluate
       - name: gold_standards
         description: CSV file containing ground truth answers for evaluation
-        default: https://valohai-examples.s3.eu-west-1.amazonaws.com/rag-doc/rag_ground_truth.csv 
+        default: https://valohai-examples.s3.eu-west-1.amazonaws.com/rag-doc/rag_ground_truth.csv
 
 - endpoint:
     name: ask
