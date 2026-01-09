@@ -1,4 +1,5 @@
 import argparse
+import json
 import logging
 import os
 import sys
@@ -6,6 +7,7 @@ import sys
 import valohai
 from dotenv import load_dotenv
 
+from rag_doctor.consts import PROVIDER
 from rag_doctor.database import create_database, prepare_database
 from rag_doctor.interactive import start_chat
 from rag_doctor.query import create_rag_chain
@@ -14,11 +16,14 @@ CREATE_DB_CMD = "create-database"
 QUERY_CMD = "query"
 CHAT_CMD = "chat"
 SERVE_CMD = "serve"
+EVALUATE_CMD = "evaluate"
 
 
 def cli(sys_argv: list[str]) -> int:
     program_name = os.path.basename(sys_argv[0])
-    usage_msg = f"Usage: {program_name} [{CREATE_DB_CMD}|{QUERY_CMD}|{CHAT_CMD}|{SERVE_CMD}]"
+    usage_msg = (
+        f"Usage: {program_name} [{CREATE_DB_CMD}|{QUERY_CMD}|{CHAT_CMD}|{SERVE_CMD}|{EVALUATE_CMD}]"
+    )
 
     if len(sys_argv) < 2:
         print(usage_msg)
@@ -34,6 +39,8 @@ def cli(sys_argv: list[str]) -> int:
         cli_query(sys_argv)
     elif command == SERVE_CMD:
         cli_serve(sys_argv)
+    elif command == EVALUATE_CMD:
+        cli_evaluate(sys_argv)
     else:
         print(usage_msg)
         if command != "--help":
@@ -69,6 +76,7 @@ def cli_query(sys_argv: list[str]) -> None:
     db_dir_on_valohai = valohai.inputs("embedding_db").dir_path()
     parser = argparse.ArgumentParser()
     parser.add_argument("--database_dir", type=str, default=db_dir_on_valohai, help="Path to directory containing Qdrant vector database")
+    parser.add_argument("--provider", type=str, default=PROVIDER, choices=["openai", "anthropic"], help="LLM provider to use")
     parser.add_argument("--question", type=str, required=True, help="Question to ask", action="append")
     args, _ = parser.parse_known_args(sys_argv[2:])
     # fmt: on
@@ -76,18 +84,35 @@ def cli_query(sys_argv: list[str]) -> None:
     questions = args.question
 
     db_client = prepare_database(args.database_dir)
-    rag_chain = create_rag_chain(db_client)
+    rag_chain = create_rag_chain(db_client, provider=args.provider)
 
+    responses_data = []
     for question in questions:
         print("\nQuestion: ")
         print(question)
 
-        message = rag_chain(question)
+        message, retrieved_contents = rag_chain(question)
         if not message or not message.content:
             raise ValueError("No response from the model")
 
         print("\nAnswer: ")
         print(message.content)
+
+        responses_data.append(
+            {
+                "question": question,
+                "answer": message.content,
+                "provider": args.provider,
+                "retrieved_contents": retrieved_contents,
+            },
+        )
+
+    # After the loop ends, save the data:
+    if valohai.config.is_running_in_valohai():
+        output_path = valohai.outputs().path(f"responses_{args.provider}.json")
+        with open(output_path, "w") as f:
+            json.dump(responses_data, f, indent=2)
+        print(f"Responses saved to {output_path}")
 
 
 def cli_chat(sys_argv: list[str]) -> None:
@@ -95,11 +120,12 @@ def cli_chat(sys_argv: list[str]) -> None:
     db_dir_on_valohai = valohai.inputs("embedding_db").dir_path()
     parser = argparse.ArgumentParser()
     parser.add_argument("--database_dir", type=str, default=db_dir_on_valohai, help="Path to directory containing Qdrant vector database")
+    parser.add_argument("--provider", type=str, default=PROVIDER, choices=["openai", "anthropic"], help="LLM provider to use")
     args, _ = parser.parse_known_args(sys_argv[2:])
     # fmt: on
 
     db_client = prepare_database(args.database_dir)
-    start_chat(db_client=db_client)
+    start_chat(db_client=db_client, provider=args.provider)
 
 
 def cli_serve(sys_argv: list[str]) -> None:
@@ -107,6 +133,7 @@ def cli_serve(sys_argv: list[str]) -> None:
     db_dir_on_valohai = valohai.inputs("embedding_db").dir_path()
     parser = argparse.ArgumentParser()
     parser.add_argument("--database_dir", type=str, default=db_dir_on_valohai, help="Path to directory containing Qdrant vector database")
+    parser.add_argument("--provider", type=str, default=PROVIDER, choices=["openai", "anthropic"], help="LLM provider to use")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to bind the server to")
     parser.add_argument("--port", type=int, default=8000, help="Port to bind the server to")
     args, _ = parser.parse_known_args(sys_argv[2:])
@@ -117,8 +144,21 @@ def cli_serve(sys_argv: list[str]) -> None:
     from rag_doctor.server import create_app
 
     db_client = prepare_database(args.database_dir)
-    app = create_app(db_client)
+    app = create_app(db_client, args.provider)
     uvicorn.run(app, host=args.host, port=args.port)
+
+
+def cli_evaluate(sys_argv: list[str]) -> None:
+    # fmt: off
+    responses_dir_on_valohai = valohai.inputs("responses").dir_path()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--responses_dir", type=str, default=responses_dir_on_valohai, help="Path to directory containing response JSON files")
+    args, _ = parser.parse_known_args(sys_argv[2:])
+    # fmt: on
+
+    from rag_doctor.evaluate import evaluate_responses
+
+    evaluate_responses(args.responses_dir)
 
 
 def main():
